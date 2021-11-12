@@ -1,5 +1,17 @@
 #!/bin/bash
 
+while :; do
+	case $1 in
+		--dir ?*)
+			DIR=${1#* }
+			;;
+		esac
+
+	shift
+done
+
+cd $DIR
+
 cross1=SRR1119189XSRR1119180
 cross2=SRR1119200XSRR1119199
 
