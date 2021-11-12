@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# Load programs:
+
+module load bwa/0.7.17
+
+module load samtools/1.12
+
+module load picard/2.25.6
+
+module load gatk/4.2.0.0
+
+SEQID=Yeast
+JAVA=/home2/cheil/programs/jre1.8.0_231/bin #GATK only works with Java v1.8
+PARENT=
+DIR=
+OUTPUTDIR=
+
+while :; do
+	case $1 in
+		--parent ?*)
+			PARENT=${1#* }
+			;;
+		--directory ?*)
+			DIR=${1#* }
+			;;
+		--reference-genome ?*)
+			REFERENCE=${1#* }
+			;;
+		--output-directory ?*)
+			OUTPUTDIR=${1#* }
+			;;
+	esac
+
+	shift
+done
+
+VCFDIR=${OUTPUTDIR}/vcf
+
+cd ${OUTPUTDIR}
+
+mkdir ${VCFDIR}
+
+# Align reads with bwa
+(>&2 echo ***BWA - mem -R***)
+bwa mem ${REFERENCE} ${DIR}/${PARENT}.1_1.fastq.gz > ${PARENT}_R1.sam
+
+(>&2 echo ***Samtools - View***)
+samtools view -b ${PARENT}_R1.sam -o ${PARENT}_R1.bam
+
+(>&2 echo ***Samtools - Sort***)
+samtools sort ${PARENT}_R1.bam -o ${PARENT}_R1_sort.bam
+
+(>&2 echo ***Samtools - Index***)
+samtools index ${PARENT}_R1_sort.bam
+
+# Print stats on how well the alignment worked
+(>&2 echo ***Samtools - Flagstat***)
+samtools flagstat ${PARENT}_R1_sort.bam
+
+# Remove intermediate files
+rm ${PARENT}_R1.sam
+rm ${PARENT}_R1.bam
+
+
+
+mkdir -p dup_metrics
+
+(>&2 echo ***Picard - MarkDuplicates***)
+${JAVA}/java -Xmx2g -jar ${PICARD_JAR} MarkDuplicates \
+        INPUT=${PARENT}_R1_sort.bam \
+        OUTPUT=${PARENT}_comb_R1.MD.bam \
+        METRICS_FILE=dup_metrics/${PARENT}_comb_R1.sort_dup_metrics \
+        REMOVE_DUPLICATES=true \
+        VALIDATION_STRINGENCY=LENIENT
+
+(>&2 echo ***Picard - AddOrReplaceReadGroups***)
+#Add or replace read groups needs to happen before GATK
+${JAVA}/java -Xmx2g -jar ${PICARD_JAR} AddOrReplaceReadGroups \
+        I=${PARENT}_comb_R1.MD.bam \
+        O=${PARENT}_comb_R1.RG.MD.bam \
+        RGID=${SEQID} \
+        RGLB=1 \
+        RGPU=1 \
+        RGPL=illumina \
+        RGSM=${PARENT} \
+        VALIDATION_STRINGENCY=LENIENT
+
+(>&2 echo ***Samtools - Sort and Index***)
+samtools sort ${PARENT}_comb_R1.RG.MD.bam \
+        -o ${PARENT}_comb_R1.RG.MD.sort.bam
+samtools index ${PARENT}_comb_R1.RG.MD.sort.bam
+
+(>&2 echo ***GATK - HaplotypeCaller***)
+gatk HaplotypeCaller \
+        -R ${REFERENCE} \
+        -I ${OUTPUTDIR}/${PARENT}_comb_R1.RG.MD.sort.bam \
+        -ERC GVCF \
+        -O ${VCFDIR}/${PARENT}_GATK_HaplotypeCaller.vcf
