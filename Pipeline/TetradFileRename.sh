@@ -37,7 +37,7 @@ done
 
 ls ${cross1}_[A-C]_*E_S* | cut -d '_' -f 2,3 | rev | cut -c2- | rev | uniq > tmp.txt
 
-cross1_countE=$(wc -l tmp.txt)
+cross1_countE=$(wc -l tmp.txt | cut -d ' ' -f 1)
 
 for ID in `seq 1 ${cross1_countE}`;
 do
@@ -59,7 +59,7 @@ rm tmp.txt
 
 ls ${cross2}_[A-C]_*A_S* | cut -d '_' -f 2,3 | rev | cut -c2- | rev | uniq > tmp.txt
 
-cross2_countA=$(wc -l tmp.txt)
+cross2_countA=$(wc -l tmp.txt | cut -d ' ' -f 1)
 
 for ID in `seq 1 ${cross2_countA}`
 do
@@ -76,7 +76,7 @@ done
 
 ls ${cross2}_[A-C]_*E_S* | cut -d '_' -f 2,3 | rev | cut -c2- | rev | uniq > tmp.txt
 
-cross2_countE=$(wc -l tmp.txt)
+cross2_countE=$(wc -l tmp.txt | cut -d ' ' -f 1)
 
 for ID in `seq 1 ${cross2_countE}`;
 do
