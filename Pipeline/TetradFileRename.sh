@@ -5,7 +5,8 @@ while :; do
 		--dir=?*)
 			DIR=${1#*=}
 			;;
-		esac
+		break
+	esac
 
 	shift
 done
