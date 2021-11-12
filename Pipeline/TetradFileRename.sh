@@ -20,7 +20,7 @@ rm tmp.txt
 
 ls ${cross1}_[A-C]_*A_S* | cut -d '_' -f 2,3 | rev | cut -c2- | rev | uniq > tmp.txt
 
-cross1_countA=$(wc -l tmp.txt)
+cross1_countA=$(wc -l tmp.txt | cut -d ' ' -f 1)
 
 for ID in `seq 1 ${cross1_countA}`
 do
