@@ -2,8 +2,8 @@
 
 while :; do
 	case $1 in
-		--dir ?*)
-			DIR=${1#* }
+		--dir=?*)
+			DIR=${1#*=}
 			;;
 		esac
 
