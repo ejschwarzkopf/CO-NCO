@@ -8,6 +8,7 @@ while [ $# -gt 0 ] ; do
 	shift
 done
 
+echo $DIR
 cd $DIR
 
 cross1=SRR1119189XSRR1119180
