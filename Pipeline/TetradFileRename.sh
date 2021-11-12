@@ -1,11 +1,8 @@
 #!/bin/bash
 
-while :; do
+while [ $# -gt 0 ] ; do
 	case $1 in
-		--dir=?*)
-			DIR=${1#*=}
-			;;
-		break
+		--dir) DIR=$2 ;;
 	esac
 
 	shift
