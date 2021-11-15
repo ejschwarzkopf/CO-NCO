@@ -12,27 +12,13 @@ CROSSOVERDIR=
 
 while :; do
 	case $1 in
-		--parent1 ?*)
-			PARENT1=${1#* }
-			;;
-		--parent2 ?*)
-			PARENT2=${1#* }
-			;;
-		--parent-directory ?*)
-			PARENTDIR=${1#* }
-			;;
-		--tetrad-directory ?*)
-			TETRADDIR=${1#* }
-			;;
-		--reference-genome ?*)
-			REFERENCE=${1#* }
-			;;
-		--output-directory ?*)
-			OUTPUTDIR=${1#* }
-			;;
-		--crossover-directory ?*)
-			CROSSOVERDIR=${1#* }
-			;;
+		--parent1) PARENT1=$2 ;;
+		--parent2) PARENT2=$2 ;;
+		--parent-directory) PARENTDIR=$2 ;;
+		--tetrad-directory) TETRADDIR=$2 ;;
+		--reference-genome) REFERENCE=$2 ;;
+		--output-directory) OUTPUTDIR=$2 ;;
+		--crossover-directory) CROSSOVERDIR=$2 ;;
 	esac
 
 	shift
