@@ -16,20 +16,12 @@ PARENT=
 DIR=
 OUTPUTDIR=
 
-while :; do
+while [ $# -gt 0 ] ; do
 	case $1 in
-		--parent ?*)
-			PARENT=${1#* }
-			;;
-		--directory ?*)
-			DIR=${1#* }
-			;;
-		--reference-genome ?*)
-			REFERENCE=${1#* }
-			;;
-		--output-directory ?*)
-			OUTPUTDIR=${1#* }
-			;;
+		--parent) PARENT=$2 ;;
+		--directory) DIR=$2 ;;
+		--reference-genome) REFERENCE=$2 ;;
+		--output-directory) OUTPUTDIR=$2 ;;
 	esac
 
 	shift
