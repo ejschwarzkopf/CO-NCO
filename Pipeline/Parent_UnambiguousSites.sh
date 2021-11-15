@@ -11,7 +11,6 @@ while [ $# -gt 0 ] ; do
     case $1 in
         --parent1) PARENT1=$2 ;;
         --parent2) PARENT2=$2 ;;
-        --directory) DIR=$2 ;;
         --reference-genome) REFERENCE=$2 ;;
         --output-directory) OUTPUTDIR=$2 ;;
     esac

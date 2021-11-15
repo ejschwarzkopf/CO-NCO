@@ -10,7 +10,7 @@ REFERENCE=
 OUTPUTDIR=
 CROSSOVERDIR=
 
-while :; do
+while [ $# -gt 0 ] ; do
 	case $1 in
 		--parent1) PARENT1=$2 ;;
 		--parent2) PARENT2=$2 ;;

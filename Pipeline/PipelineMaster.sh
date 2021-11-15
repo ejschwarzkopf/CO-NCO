@@ -29,7 +29,6 @@ CROSSOVERDIR=
 
 while [ $# -gt 0 ] ; do
 	case $1 in
-		--dir) DIR=$2 ;;
 		--parent1) PARENT1=$2 ;;
 		--parent2) PARENT2=$2 ;;
 		--se1) SE1=1 ;;
@@ -58,13 +57,15 @@ else
 	./PE_Parent_Align.sh --parent ${PARENT2} --directory ${PARENTDIR} --reference-genome ${REFERENCE} --output-directory ${OUTPUTDIR}
 fi
 
+./Parent_UnambiguousSites.sh --parent1 ${PARENT1} --parent2 ${PARENT2} --reference-genome ${REFERENCE} --output-directory ${OUTPUTDIR}
+
 cp -R ${CROSSOVERDIR} ${OUTPUTDIR}
 
 CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 1 | rev)
 
 PARENTS=${PARENT1}X${PARENT2}
 
-RUN TETRAD SCRIPT --tetrad-directory ${TETRADDIR} --output-directory ${OUTPUTDIR} --parent1 ${PARENT1} --parent2 ${PARENT2} --crossover-name ${CROSSOVERNAME}
+./Tetrad_CrossOver.sh --tetrad-directory ${TETRADDIR} --output-directory ${OUTPUTDIR} --parent1 ${PARENT1} --parent2 ${PARENT2} --crossover-name ${CROSSOVERNAME} --parent-directory ${PARENTDIR} --reference-genome ${REFERENCE}
 
 rm -R ${OUTPUTDIR}/${CROSSOVERNAME}
 
