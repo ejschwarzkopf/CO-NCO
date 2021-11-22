@@ -4,7 +4,6 @@
 
 PARENT1=
 PARENT2=
-PARENTDIR=
 TETRADDIR=
 REFERENCE=
 OUTPUTDIR=
@@ -14,7 +13,6 @@ while [ $# -gt 0 ] ; do
 	case $1 in
 		--parent1) PARENT1=$2 ;;
 		--parent2) PARENT2=$2 ;;
-		--parent-directory) PARENTDIR=$2 ;;
 		--tetrad-directory) TETRADDIR=$2 ;;
 		--reference-genome) REFERENCE=$2 ;;
 		--output-directory) OUTPUTDIR=$2 ;;
@@ -49,7 +47,7 @@ do
 	MODDIR=/usr/local/bin
 	JAVA=/home2/cheil/programs/jre1.8.0_231/bin #GATK only works with Java v1.8
 	SEQID=Yeasttetrad
-	REF=${REFERENCE} # Reference genome
+	REFERENCE=${REFERENCE} # Reference genome
 	#REF=/home2/cheil/reference_seq/sacCer3.fasta
 	SCRIPTS=/home4/eschwar3/CO_NCO/1.scripts # Location of custom scripts
 	VCFDIR=${WORKDIR}/vcf
@@ -62,7 +60,7 @@ do
 	# Tetrad 1
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REF} ${SEQDIR}/${SAMPLE1}_1.fastq.gz ${SEQDIR}/${SAMPLE1}_2.fastq.gz > ${SAMPLE1}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE1}_1.fastq.gz ${SEQDIR}/${SAMPLE1}_2.fastq.gz > ${SAMPLE1}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE1}_R1R2.sam -o ${SAMPLE1}_R1R2.bam
@@ -112,7 +110,7 @@ do
 
 	(>&2 echo ***GATK - HaplotypeCaller***)
 	gatk HaplotypeCaller \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -I ${WORKDIR}/${SAMPLE1}_comb_R1R2.RG.MD.sort.bam \
 	        -ERC GVCF \
 	        -O ${VCFDIR}/${SAMPLE1}_GATK_HaplotypeCaller.vcf
@@ -120,7 +118,7 @@ do
 	# Tetrad 2
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REF} ${SEQDIR}/${SAMPLE2}_1.fastq.gz ${SEQDIR}/${SAMPLE2}_2.fastq.gz > ${SAMPLE2}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE2}_1.fastq.gz ${SEQDIR}/${SAMPLE2}_2.fastq.gz > ${SAMPLE2}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE2}_R1R2.sam -o ${SAMPLE2}_R1R2.bam
@@ -170,7 +168,7 @@ do
 
 	(>&2 echo ***GATK - HaplotypeCaller***)
 	gatk HaplotypeCaller \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -I ${WORKDIR}/${SAMPLE2}_comb_R1R2.RG.MD.sort.bam \
 	        -ERC GVCF \
 	        -O ${VCFDIR}/${SAMPLE2}_GATK_HaplotypeCaller.vcf
@@ -178,7 +176,7 @@ do
 	# Tetrad 3
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REF} ${SEQDIR}/${SAMPLE3}_1.fastq.gz ${SEQDIR}/${SAMPLE3}_2.fastq.gz > ${SAMPLE3}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE3}_1.fastq.gz ${SEQDIR}/${SAMPLE3}_2.fastq.gz > ${SAMPLE3}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE3}_R1R2.sam -o ${SAMPLE3}_R1R2.bam
@@ -228,7 +226,7 @@ do
 
 	(>&2 echo ***GATK - HaplotypeCaller***)
 	gatk HaplotypeCaller \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -I ${WORKDIR}/${SAMPLE3}_comb_R1R2.RG.MD.sort.bam \
 	        -ERC GVCF \
 	        -O ${VCFDIR}/${SAMPLE3}_GATK_HaplotypeCaller.vcf
@@ -236,7 +234,7 @@ do
 	# Tetrad 4
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REF} ${SEQDIR}/${SAMPLE4}_1.fastq.gz ${SEQDIR}/${SAMPLE4}_2.fastq.gz > ${SAMPLE4}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE4}_1.fastq.gz ${SEQDIR}/${SAMPLE4}_2.fastq.gz > ${SAMPLE4}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE4}_R1R2.sam -o ${SAMPLE4}_R1R2.bam
@@ -286,7 +284,7 @@ do
 
 	(>&2 echo ***GATK - HaplotypeCaller***)
 	gatk HaplotypeCaller \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -I ${WORKDIR}/${SAMPLE4}_comb_R1R2.RG.MD.sort.bam \
 	        -ERC GVCF \
 	        -O ${VCFDIR}/${SAMPLE4}_GATK_HaplotypeCaller.vcf
@@ -294,7 +292,7 @@ do
 	# All together now
 
 	gatk CombineGVCFs \
-		-R ${REF} \
+		-R ${REFERENCE} \
 		--variant ${VCFDIR}/${SAMPLE1}_GATK_HaplotypeCaller.vcf \
 		--variant ${VCFDIR}/${SAMPLE2}_GATK_HaplotypeCaller.vcf \
 		--variant ${VCFDIR}/${SAMPLE3}_GATK_HaplotypeCaller.vcf \
@@ -305,7 +303,7 @@ do
 
 	(>&2 echo ***GATK - GenotypeGVCFs***)
 	gatk GenotypeGVCFs \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -V ${VCFDIR}/${SAMPLE}_GATK_HaplotypeCaller.vcf \
 	        -O ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs.vcf
 
@@ -318,7 +316,7 @@ do
 	(>&2 echo ***GATK - SelectVariants***)
 	# Extract SNPs from call set.
 	gatk SelectVariants \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -V ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_IndelFiltered.vcf \
 	        --select-type-to-include SNP \
 	        -O ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_SNPS.vcf
@@ -326,7 +324,7 @@ do
 	(>&2 echo ***GATK - VariantFiltration***)
 	# Apply filters to call sets.
 	gatk VariantFiltration \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -V ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_SNPS.vcf \
 	        -filter "QUAL < 30" --filter-name "QUAL30" \
 	        -filter "QD < 2.0" --filter-name "QD2" \
@@ -340,7 +338,7 @@ do
 	(>&2 echo ***GATK - SelectVariants***)
 	# Select only variants that have passed the filters.
 	gatk SelectVariants \
-	        -R ${REF} \
+	        -R ${REFERENCE} \
 	        -V ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_SNPS_Tagged.vcf \
 	        --selectExpressions 'vc.isNotFiltered()' \
 	        -O ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_SNPS_Tagged_Filtered.vcf
@@ -348,7 +346,7 @@ do
 	(>&2 echo ***GATK - VariantsToTable***)
 	# Variants to table
 	gatk VariantsToTable \
-	        -R $REF \
+	        -R ${REFERENCE} \
 	        -V ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_SNPS_Tagged_Filtered.vcf \
 	        -F CHROM -F POS -GF AD \
 	        -O ${VCFDIR}/${SAMPLE}_GATK_GenotypeGVCFs_SNPS_Tagged_Filtered.table
@@ -436,13 +434,15 @@ echo '"${PARENTS}_${ID}",' >> tmp_tetradnames_${PARENTS}.txt
 
 done
 
-${TETRAD_NAMES}=$(cat tmp_tetradnames_${PARENTS}.txt)
-
-sed -i "s/tetradname=['test1']/tetradname=['"${PARENTS}"']/g" ${CROSSOVERDIR}/crossOver.py
-
-sed -i 's/files = [["test1_sample1"]]/files = [['${TETRAD_NAMES%,}']]/g' ${CROSSOVERDIR}/crossOver.py
-
 CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 1 | rev)
+
+TETRAD_NAMES=$(cat tmp_tetradnames_${PARENTS}.txt)
+
+
+sed -i "s/tetradname=['test1']/tetradname=['"${PARENTS}"']/g" ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
+
+sed -i 's/files = [["test1_sample1"]]/files = [['${TETRAD_NAMES%,}']]/g' ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
+
 
 python2 ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
 

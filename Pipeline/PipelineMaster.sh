@@ -12,6 +12,17 @@
 # reference genome file
 # output folder
 
+# usage example:
+# sbatch PipelineMaste.sh \
+# --parent1 SRR1119189\
+# --parent2 SRR1119180\
+# --se2 \ # this flag is here because parent2 is single-end sequenced
+# --parent-directory /home4/eschwar3/CO_NCO/2.data/2.sequence_data/1.parents_fastq/s_uvarum_seq \
+# --tetrad-directory home4/eschwar3/CO_NCO/2.data/2.sequence_data/2.offspring_seq/BigRunSequences/fastq_NVS114A_Heilv2/Heil \
+# --reference-genome /home4/eschwar3/CO_NCO/2.data/1.reference_genome/Sbay.ultrascaf.fasta \
+# --output-directory \
+# --crossover-directory /home4/eschwar3/CrossOver_v6.3/ \
+
 die() {
 	printf '%s\n' "$1" >&2
 	exit 1
@@ -65,7 +76,7 @@ CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 1 | rev)
 
 PARENTS=${PARENT1}X${PARENT2}
 
-./Tetrad_CrossOver.sh --tetrad-directory ${TETRADDIR} --output-directory ${OUTPUTDIR} --parent1 ${PARENT1} --parent2 ${PARENT2} --crossover-name ${CROSSOVERNAME} --parent-directory ${PARENTDIR} --reference-genome ${REFERENCE}
+./Tetrad_CrossOver.sh --tetrad-directory ${TETRADDIR} --output-directory ${OUTPUTDIR} --parent1 ${PARENT1} --parent2 ${PARENT2} --crossover-directory ${CROSSOVERDIR} --reference-genome ${REFERENCE}
 
 rm -R ${OUTPUTDIR}/${CROSSOVERNAME}
 
