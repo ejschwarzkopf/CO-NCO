@@ -15,6 +15,7 @@ JAVA=/home2/cheil/programs/jre1.8.0_231/bin #GATK only works with Java v1.8
 PARENT=
 DIR=
 OUTPUTDIR=
+REFERENCE=
 
 while [ $# -gt 0 ] ; do
 	case $1 in
