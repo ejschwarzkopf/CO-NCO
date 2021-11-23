@@ -72,7 +72,7 @@ fi
 
 cp -R ${CROSSOVERDIR} ${OUTPUTDIR}
 
-CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 1 | rev)
+CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 2 | rev)
 
 PARENTS=${PARENT1}X${PARENT2}
 
