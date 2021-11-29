@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# Load programs:
+
+module load bwa/0.7.17
+
+module load samtools/1.12
+
+module load picard/2.25.6
+
+module load gatk/4.2.0.0
+
 PARENT1=
 PARENT2=
 PARENTDIR=
