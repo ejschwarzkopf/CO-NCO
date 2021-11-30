@@ -12,8 +12,6 @@ module load gatk/4.2.0.0
 
 PARENT1=
 PARENT2=
-PARENTDIR=
-TETRADDIR=
 REFERENCE=
 OUTPUTDIR=
 
@@ -27,6 +25,8 @@ while [ $# -gt 0 ] ; do
 
     shift
 done
+
+BCFTOOLS=/home4/eschwar3/bin/bin #Location of bcftools
 
 VCFDIR=${OUTPUTDIR}/vcf
 
