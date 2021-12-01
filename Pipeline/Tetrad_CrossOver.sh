@@ -32,9 +32,9 @@ mkdir ${OUTPUTDIR}/out
 
 TETRAD_COUNT=$(ls ${TETRADDIR}/${PARENTS}_*A_R1.fastq.gz | wc -l)
 
-touch tmp_tetradnames_${PARENTS}.txt
+touch ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 
-for ID in `seq 1 ${TETRAD_COUNT};
+for ID in `seq 1 ${TETRAD_COUNT}`;
 do
 	SAMPLE1=${PARENTS}_${ID}A_R1.fastq.gz # Passed sample prefix (ex: Sample-01)
 	SAMPLE2=${PARENTS}_${ID}B_R1.fastq.gz # Passed sample prefix (ex: Sample-01)
@@ -430,13 +430,13 @@ done < $loc
 
 sed 's/Suva_//g' tmp.txt > ${OUTPUTDIR}/segfiles/${PARENTS}_${ID}.txt
 
-echo '"${PARENTS}_${ID}",' >> tmp_tetradnames_${PARENTS}.txt
+echo '"${PARENTS}_${ID}",' >> ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 
 done
 
 CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 1 | rev)
 
-TETRAD_NAMES=$(cat tmp_tetradnames_${PARENTS}.txt)
+TETRAD_NAMES=$(cat ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt)
 
 
 sed -i "s/tetradname=['test1']/tetradname=['"${PARENTS}"']/g" ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
