@@ -47,10 +47,10 @@ touch ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 
 for ID in `seq 1 ${TETRAD_COUNT}`;
 do
-	SAMPLE1=${PARENTS}_${ID}A_R1.fastq.gz # Passed sample prefix (ex: Sample-01)
-	SAMPLE2=${PARENTS}_${ID}B_R1.fastq.gz # Passed sample prefix (ex: Sample-01)
-	SAMPLE3=${PARENTS}_${ID}C_R1.fastq.gz # Passed sample prefix (ex: Sample-01)
-	SAMPLE4=${PARENTS}_${ID}D_R1.fastq.gz # Passed sample prefix (ex: Sample-01)
+	SAMPLE1=${PARENTS}_${ID}A # Passed sample prefix (ex: Sample-01)
+	SAMPLE2=${PARENTS}_${ID}B # Passed sample prefix (ex: Sample-01)
+	SAMPLE3=${PARENTS}_${ID}C # Passed sample prefix (ex: Sample-01)
+	SAMPLE4=${PARENTS}_${ID}D # Passed sample prefix (ex: Sample-01)
 	SAMPLE=${PARENTS}_${ID}
 	DIR=${OUTPUTDIR}
 	WORKDIR=${OUTPUTDIR} # Where files will be created
@@ -71,7 +71,7 @@ do
 	# Tetrad 1
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE1}_1.fastq.gz ${SEQDIR}/${SAMPLE1}_2.fastq.gz > ${SAMPLE1}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE1}_R1.fastq.gz ${SEQDIR}/${SAMPLE1}_R2.fastq.gz > ${SAMPLE1}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE1}_R1R2.sam -o ${SAMPLE1}_R1R2.bam
@@ -129,7 +129,7 @@ do
 	# Tetrad 2
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE2}_1.fastq.gz ${SEQDIR}/${SAMPLE2}_2.fastq.gz > ${SAMPLE2}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE2}_R1.fastq.gz ${SEQDIR}/${SAMPLE2}_R2.fastq.gz > ${SAMPLE2}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE2}_R1R2.sam -o ${SAMPLE2}_R1R2.bam
@@ -187,7 +187,7 @@ do
 	# Tetrad 3
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE3}_1.fastq.gz ${SEQDIR}/${SAMPLE3}_2.fastq.gz > ${SAMPLE3}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE3}_R1.fastq.gz ${SEQDIR}/${SAMPLE3}_R2.fastq.gz > ${SAMPLE3}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE3}_R1R2.sam -o ${SAMPLE3}_R1R2.bam
@@ -245,7 +245,7 @@ do
 	# Tetrad 4
 	# Align reads with bwa
 	(>&2 echo ***BWA - mem -R***)
-	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE4}_1.fastq.gz ${SEQDIR}/${SAMPLE4}_2.fastq.gz > ${SAMPLE4}_R1R2.sam
+	bwa mem ${REFERENCE} ${SEQDIR}/${SAMPLE4}_R1.fastq.gz ${SEQDIR}/${SAMPLE4}_R2.fastq.gz > ${SAMPLE4}_R1R2.sam
 
 	(>&2 echo ***Samtools - View***)
 	samtools view -bS ${SAMPLE4}_R1R2.sam -o ${SAMPLE4}_R1R2.bam
