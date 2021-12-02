@@ -56,7 +56,7 @@ do
 	WORKDIR=${OUTPUTDIR} # Where files will be created
 	SEQDIR=${TETRADDIR} # Location of Fastqs
 	MODDIR=/usr/local/bin
-	JAVA=/home2/cheil/programs/jre1.8.0_231/bin #GATK only works with Java v1.8
+	JAVA=/home1/cheil/programs/jre1.8.0_231/bin #GATK only works with Java v1.8
 	SEQID=Yeasttetrad
 	REFERENCE=${REFERENCE} # Reference genome
 	#REF=/home2/cheil/reference_seq/sacCer3.fasta
