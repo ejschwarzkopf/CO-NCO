@@ -445,7 +445,7 @@ echo '"${PARENTS}_${ID}",' >> ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 
 done
 
-CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 1 | rev)
+CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 2 | rev)
 
 TETRAD_NAMES=$(cat ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt)
 
