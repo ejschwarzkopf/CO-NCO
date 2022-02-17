@@ -12,6 +12,8 @@ module load picard/2.25.6
 
 module load gatk/4.2.0.0
 
+modle load python/2.7.18
+
 
 PARENT1=
 PARENT2=
@@ -43,6 +45,7 @@ mkdir ${OUTPUTDIR}/out
 
 TETRAD_COUNT=$(ls ${TETRADDIR}/${PARENTS}_*A_R1.fastq.gz | wc -l)
 
+rm ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 touch ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 
 for ID in `seq 1 ${TETRAD_COUNT}`;
@@ -377,10 +380,10 @@ do
 	TETRAD=$(grep "$POS	" $vcf)
 	REF=$(echo $TETRAD | sed 's/ /	/g' | cut -f 4)
 	ALT=$(echo $TETRAD | sed 's/ /	/g' | cut -f 5)
-	T1=$(echo $TETRAD | sed 's/ /	/g' | cut -f 10 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
-	T2=$(echo $TETRAD | sed 's/ /	/g' | cut -f 11 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
-	T3=$(echo $TETRAD | sed 's/ /	/g' | cut -f 12 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
-	T4=$(echo $TETRAD | sed 's/ /	/g' | cut -f 13 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
+	T1=$(echo $TETRAD | sed 's/ /	/g' | cut -f 12 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
+	T2=$(echo $TETRAD | sed 's/ /	/g' | cut -f 13 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
+	T3=$(echo $TETRAD | sed 's/ /	/g' | cut -f 14 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
+	T4=$(echo $TETRAD | sed 's/ /	/g' | cut -f 15 | cut -d ':' -f 1 | sed 's*/**g' | sed 's/|//g')
 
 	>&2 echo $POS
 
@@ -441,7 +444,7 @@ done < $loc
 
 sed 's/Suva_//g' tmp.txt > ${OUTPUTDIR}/segfiles/${PARENTS}_${ID}.txt
 
-echo '"${PARENTS}_${ID}",' >> ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
+echo ${PARENTS}_${ID},  >> ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt
 
 done
 
@@ -449,10 +452,12 @@ CROSSOVERNAME=$(echo ${CROSSOVERDIR} | rev | cut -d '/' -f 2 | rev)
 
 TETRAD_NAMES=$(cat ${OUTPUTDIR}/tmp_tetradnames_${PARENTS}.txt)
 
+TETRAD_NAMES=$(echo ${TETRAD_NAMES%,})
+
 
 sed -i "s/tetradname=['test1']/tetradname=['"${PARENTS}"']/g" ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
 
-sed -i 's/files = [["test1_sample1"]]/files = [['${TETRAD_NAMES%,}']]/g' ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
+sed -i 's/files = [["test1_sample1"]]/files = [['${TETRAD_NAMES}']]/g' ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
 
 
 python2 ${OUTPUTDIR}/${CROSSOVERNAME}/crossOver.py
