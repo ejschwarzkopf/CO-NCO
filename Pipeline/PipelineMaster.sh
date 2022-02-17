@@ -13,15 +13,15 @@
 # output folder
 
 # usage example:
-# sbatch PipelineMaster.sh \
-# --parent1 SRR1119189 \
-# --parent2 SRR1119180 \
-# --se2 \
-# --parent-directory /home4/eschwar3/CO_NCO/2.data/2.sequence_data/1.parents_fastq/s_uvarum_seq \
-# --tetrad-directory home4/eschwar3/CO_NCO/2.data/2.sequence_data/2.offspring_seq/BigRunSequences/fastq_NVS114A_Heilv2/Heil \
-# --reference-genome /home4/eschwar3/CO_NCO/2.data/1.reference_genome/Sbay.ultrascaf.fasta \
-# --output-directory /home4/eschwar3/CO_NCO/3.output/2.CrossOver/SRR1119189XSRR1119180 \
-# --crossover-directory /home4/eschwar3/CrossOver_v6.3/
+sbatch PipelineMaster.sh \
+--parent1 SRR1119189 \
+--parent2 SRR1119180 \
+--se2 \
+--parent-directory /home4/eschwar3/CO_NCO/2.data/2.sequence_data/1.parents_fastq/s_uvarum_seq \
+--tetrad-directory /home4/eschwar3/CO_NCO/2.data/2.sequence_data/2.offspring_seq/BigRunSequences/fastq_NVS114A_Heilv2/Heil \
+--reference-genome /home4/eschwar3/CO_NCO/2.data/1.reference_genome/Sbay.ultrascaf.fasta \
+--output-directory /home4/eschwar3/CO_NCO/3.output/2.CrossOver/SRR1119189XSRR1119180 \
+--crossover-directory /home4/eschwar3/CrossOver_v6.3/
 
 die() {
 	printf '%s\n' "$1" >&2
