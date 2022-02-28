@@ -10,6 +10,8 @@ module load picard/2.25.6
 
 module load gatk/4.2.0.0
 
+module load java/openjdk-11
+
 SEQID=Yeast
 JAVA=/home2/cheil/programs/jre1.8.0_231/bin #GATK only works with Java v1.8
 PARENT=
@@ -60,7 +62,7 @@ rm ${PARENT}_R1R2.bam
 mkdir -p dup_metrics
 
 (>&2 echo ***Picard - MarkDuplicates***)
-${JAVA}/java -Xmx2g -jar ${PICARD_JAR} MarkDuplicates \
+java -Xmx2g -jar ${PICARD_JAR} MarkDuplicates \
         INPUT=${PARENT}_R1R2_sort.bam \
         OUTPUT=${PARENT}_comb_R1R2.MD.bam \
         METRICS_FILE=dup_metrics/${PARENT}_comb_R1R2.sort_dup_metrics \
@@ -69,7 +71,7 @@ ${JAVA}/java -Xmx2g -jar ${PICARD_JAR} MarkDuplicates \
 
 (>&2 echo ***Picard - AddOrReplaceReadGroups***)
 #Add or replace read groups needs to happen before GATK
-${JAVA}/java -Xmx2g -jar ${PICARD_JAR} AddOrReplaceReadGroups \
+java -Xmx2g -jar ${PICARD_JAR} AddOrReplaceReadGroups \
         I=${PARENT}_comb_R1R2.MD.bam \
         O=${PARENT}_comb_R1R2.RG.MD.bam \
         RGID=${SEQID} \
