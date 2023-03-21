@@ -38,6 +38,16 @@ for file in `ls segfiles`; do sed -i 's/ /	/g' segfiles/$file; done
 
 python2 crossOver.py
 
+cd out/SRR119200XSRR1119199
+
+sed -i 's/\[/"\[/g' CoList_SRR119200XSRR1119199.txt
+sed -i 's/\]/\]"/g' CoList_SRR119200XSRR1119199.txt
+sed -i 's/#//g' CoList_SRR119200XSRR1119199.txt
+
+
+
+
+
 
 # Do whatever we're going to do with the output
 
