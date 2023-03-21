@@ -2,13 +2,23 @@
 
 # Load programs:
 
+module unload bwa
+
 module load bwa/0.7.17
+
+module unload samtools
 
 module load samtools/1.12
 
+module unload picard
+
 module load picard/2.25.6
 
+module unload gatk
+
 module load gatk/4.2.0.0
+
+module unload java
 
 module load java/openjdk-11
 
