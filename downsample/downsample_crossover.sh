@@ -138,6 +138,7 @@ COs1_count_16$NCOcount=apply(COs1_count_16,1,function(x){length(which(NCOs1_16$p
 COs1_count_all=rbind(COs1_count_1,COs1_count_2,COs1_count_3,COs1_count_4,COs1_count_5,COs1_count_6,COs1_count_7,COs1_count_8,COs1_count_9,COs1_count_10,COs1_count_11,COs1_count_12,COs1_count_13,COs1_count_14,COs1_count_15,COs1_count_16)
 windows=which(COs1_count_all$chr==4&COs1_count_all$start>=236000&COs1_count_all$end<=430000)
 d=COs1_count_all[windows,]
+std.err <- function(x) sd(x)/sqrt(length(x))
 Count_output=data.frame(CO_mean=mean(d$COcount),CO_se=std.err(d$COcount),NCO_mean=c(d$NCOcount),NCO_se=c(d$NCOcount))
 write.table(Count_output,"CO_NCO_table.txt",quote=F,row.names=F,header=F)'
 
