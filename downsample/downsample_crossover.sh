@@ -44,7 +44,7 @@ sed -i 's/\[/"\[/g' CoList_SRR119200XSRR1119199.txt
 sed -i 's/\]/\]"/g' CoList_SRR119200XSRR1119199.txt
 sed -i 's/#//g' CoList_SRR119200XSRR1119199.txt
 
-Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt", header=T)
+Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt",header=T)
 colnames(segfile1)=c("chr", "pos")
 NCOs1_raw<-read.table("TractList_SRR1119200XSRR1119199.txt", header=T)
 NCOs1<-NCOs1_raw[which(NCOs1_raw$marker>=3),]
