@@ -16,8 +16,9 @@ j=$(awk 'NR=='$k' {print $2}' downsample_aux.txt)
 
 Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt")
 i='$i'
+set.seed('$k')
 if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=38}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL}
-sample<-sort(runif(n=l, min=1, max=10609))
+sample<-sort(floor(runif(n=l, min=1, max=10609)))
 sample_list=allSNPs[sample,]
 # This is where I need to load all of the seg files, extract the sampled snps and write the downsampled seg files
 segfiles<-list()
