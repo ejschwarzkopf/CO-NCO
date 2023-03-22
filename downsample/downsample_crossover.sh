@@ -17,7 +17,7 @@ j=$(awk 'NR=='$k' {print $2}' downsample_aux.txt)
 Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt")
 i='$i'
 set.seed('$k')
-if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=38}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL}
+if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL}
 sample<-sort(floor(runif(n=l, min=1, max=10609)))
 sample_list=allSNPs[sample,]
 # This is where I need to load all of the seg files, extract the sampled snps and write the downsampled seg files
@@ -26,7 +26,7 @@ for(k in c(1:26, 28:48)){
 filename1=paste0("~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 segfile<-read.table(filename1, header=F)
 segfiles[[k]]<-segfile
-segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<14),], segfiles[[k]][which(segfiles[[k]][,1] == 14 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]>14),])
+segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<4 & segfiles[[k]][,2]>236000),], segfiles[[k]][which(segfiles[[k]][,1] == 4 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]>4 & segfiles[[k]][,3]<430000),])
 filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 write.table(segfiles[[k]], filename, quote=F, col.names=F, row.names=F)
 }
