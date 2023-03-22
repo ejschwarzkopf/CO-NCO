@@ -26,7 +26,7 @@ for(k in c(1:26, 28:48)){
 filename1=paste0("~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 segfile<-read.table(filename1, header=F)
 segfiles[[k]]<-segfile
-segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<4 & segfiles[[k]][,2]>236000),], segfiles[[k]][which(segfiles[[k]][,1] == 4 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]>4 & segfiles[[k]][,3]<430000),])
+segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<4),], segfiles[[k]][which(segfiles[[k]][,1]==4 & segfiles[[k]][,2]>236000),], segfiles[[k]][which(segfiles[[k]][,1] == 4 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]==4 & segfiles[[k]][,3]<430000),], segfiles[[k]][which(segfiles[[k]][,1]>4),])
 filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 write.table(segfiles[[k]], filename, quote=F, col.names=F, row.names=F)
 }
