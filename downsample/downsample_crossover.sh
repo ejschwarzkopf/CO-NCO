@@ -46,6 +46,8 @@ sed -i 's/\]/\]"/g' CoList_SRR1119200XSRR1119199.txt
 sed -i 's/#//g' CoList_SRR1119200XSRR1119199.txt
 
 sed -i 's/#//g' TractList_SRR1119200XSRR1119199.txt
+sed -i 's/YJM SNP/YJM.SNP/g' TractList_SRR1119200XSRR1119199.txt
+sed -i 's/_//g' TractList_SRR1119200XSRR1119199.txt
 
 Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt",header=T)
 NCOs1_raw<-read.table("TractList_SRR1119200XSRR1119199.txt",header=T)
