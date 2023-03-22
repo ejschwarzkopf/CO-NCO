@@ -30,7 +30,8 @@ filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/SRR111920
 write.table(segfiles[[k]], filename, quote=F, col.names=F, row.names=F)
 }
 
-write.table(sample_list, "subsample_'$i'/replicate_'$j'/sample_list.txt", quote=F, col.names=F, row.names=F)'
+write.table(sample_list, "subsample_'$i'/replicate_'$j'/sample_list.txt", quote=F, col.names=F, row.names=F)
+q()'
 
 cd subsample_$i/replicate_$j/CrossOver_v6.3
 
@@ -44,7 +45,7 @@ sed -i 's/\[/"\[/g' CoList_SRR119200XSRR1119199.txt
 sed -i 's/\]/\]"/g' CoList_SRR119200XSRR1119199.txt
 sed -i 's/#//g' CoList_SRR119200XSRR1119199.txt
 
-Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt",header=T)
+Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt", header=T)
 colnames(segfile1)=c("chr", "pos")
 NCOs1_raw<-read.table("TractList_SRR1119200XSRR1119199.txt", header=T)
 NCOs1<-NCOs1_raw[which(NCOs1_raw$marker>=3),]
