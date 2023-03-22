@@ -139,7 +139,7 @@ COs1_count_all=rbind(COs1_count_1,COs1_count_2,COs1_count_3,COs1_count_4,COs1_co
 windows=which(COs1_count_all$chr==4&COs1_count_all$start>=236000&COs1_count_all$end<=430000)
 d=COs1_count_all[windows,]
 std.err <- function(x) sd(x)/sqrt(length(x))
-Count_output=data.frame(CO_mean=mean(d$COcount),CO_se=std.err(d$COcount),NCO_mean=mean(d$NCOcount),NCO_se=ste.err(d$NCOcount))
+Count_output=data.frame(CO_mean=mean(d$COcount),CO_se=std.err(d$COcount),NCO_mean=mean(d$NCOcount),NCO_se=std.err(d$NCOcount))
 write.table(Count_output,"CO_NCO_table.txt",quote=F,row.names=F,col.names=F)'
 
 mkdir ~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/subsample_$i/tables
