@@ -4,41 +4,55 @@
 #SBATCH --output=/home4/eschwar3/CO_NCO/1.scripts/1.logs/Downsample_%a.out
 #SBATCH --array=1-180
 
+# Load necessary modules
+
 module load python/2.7.18
 module load R/4.1.0
 
+# Move to location of important files
+
 cd ~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/
 
+# Sets the scenario for the downsampling. Equivalent to the row number of the "downsample_aux.txt" file
+
 k=$SLURM_ARRAY_TASK_ID
+
+# From the current line number (k), we extract the SNP density (i) and replicate number (j)
 
 i=$(awk 'NR=='$k' {print $1}' downsample_aux.txt)
 j=$(awk 'NR=='$k' {print $2}' downsample_aux.txt)
 
-Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt")
-i='$i'
-set.seed('$k')
-if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL}
-sample<-sort(floor(runif(n=l, min=1, max=10609)))
-sample_list=allSNPs[sample,]
-# This is where I need to load all of the seg files, extract the sampled snps and write the downsampled seg files
+
+
+Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt") # Read in the positions of SNPs to be downsampled (chr pos)
+i='$i' # Set the SNP density
+set.seed('$k') # Sets a seed for the specific run
+if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL} # Establishes the number of SNPs to be sampled (# of SNPs in the region * (desired SNP density / observed SNP density))
+sample<-sort(floor(runif(n=l, min=1, max=10609))) # Samples without replacement from the number of SNPs
+sample_list=allSNPs[sample,] # Extracts the sampled SNPs into a table
+# Load all of the seg files, extract the sampled snps and write the downsampled seg files
 segfiles<-list()
 for(k in c(1:26, 28:48)){
 filename1=paste0("~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 segfile<-read.table(filename1, header=F)
 segfiles[[k]]<-segfile
-segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<4),], segfiles[[k]][which(segfiles[[k]][,1]==4 & segfiles[[k]][,2]>236000),], segfiles[[k]][which(segfiles[[k]][,1] == 4 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]==4 & segfiles[[k]][,3]<430000),], segfiles[[k]][which(segfiles[[k]][,1]>4),])
+segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<14),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,3]<236000),], segfiles[[k]][which(segfiles[[k]][,1] == 14 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,3]<430000),], segfiles[[k]][which(segfiles[[k]][,1]>14),])
 filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 write.table(segfiles[[k]], filename, quote=F, col.names=F, row.names=F)
 }
-
+# This last part saves the sampled SNPs to a file
 write.table(sample_list, "subsample_'$i'/replicate_'$j'/sample_list.txt", quote=F, col.names=F, row.names=F)
 q()'
+
+# Move to the CrossOver folder and run CrossOver on the subsampled segfiles
 
 cd subsample_$i/replicate_$j/CrossOver_v6.3
 
 for file in `ls segfiles`; do sed -i 's/ /	/g' segfiles/$file; done
 
 python2 crossOver.py
+
+# Prep CrossOver output for loading into R
 
 cd out/SRR1119200XSRR1119199
 
@@ -51,6 +65,8 @@ sed -i 's/YJM SNP/YJM.SNP/g' TractList_SRR1119200XSRR1119199.txt
 sed -i 's/_//g' TractList_SRR1119200XSRR1119199.txt
 sed -i 's/\[/"\[/g' TractList_SRR1119200XSRR1119199.txt
 sed -i 's/\]/\]"/g' TractList_SRR1119200XSRR1119199.txt
+
+# Loads output into R and extract the average number of CO and NCO for subsampled and not subsampled segfiles
 
 Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt",header=T)
 NCOs1_raw<-read.table("TractList_SRR1119200XSRR1119199.txt",header=T)
@@ -137,7 +153,7 @@ COs1_count_14$NCOcount=apply(COs1_count_14,1,function(x){length(which(NCOs1_14$p
 COs1_count_15$NCOcount=apply(COs1_count_15,1,function(x){length(which(NCOs1_15$pos.bp.>=x[2]&NCOs1_15$pos.bp.<=x[3]&NCOs1_15$tracttype!=1&NCOs1_15$tracttype!=10))})
 COs1_count_16$NCOcount=apply(COs1_count_16,1,function(x){length(which(NCOs1_16$pos.bp.>=x[2]&NCOs1_16$pos.bp.<=x[3]&NCOs1_16$tracttype!=1&NCOs1_16$tracttype!=10))})
 COs1_count_all=rbind(COs1_count_1,COs1_count_2,COs1_count_3,COs1_count_4,COs1_count_5,COs1_count_6,COs1_count_7,COs1_count_8,COs1_count_9,COs1_count_10,COs1_count_11,COs1_count_12,COs1_count_13,COs1_count_14,COs1_count_15,COs1_count_16)
-windows=which(COs1_count_all$chr==4&COs1_count_all$start>=236000&COs1_count_all$end<=430000)
+windows=which(COs1_count_all$chr==14&COs1_count_all$start>=236000&COs1_count_all$end<=430000)
 d=COs1_count_all[windows,]
 std.err <- function(x) sd(x)/sqrt(length(x))
 Count_output=data.frame(CO_mean=mean(d$COcount),CO_se=std.err(d$COcount),NCO_mean=mean(d$NCOcount),NCO_se=std.err(d$NCOcount))
