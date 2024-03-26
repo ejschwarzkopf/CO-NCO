@@ -2,7 +2,7 @@
 #SBATCH -J Downsample
 #SBATCH --error=/home4/eschwar3/CO_NCO/1.scripts/1.logs/Downsample_%a.err
 #SBATCH --output=/home4/eschwar3/CO_NCO/1.scripts/1.logs/Downsample_%a.out
-#SBATCH --array=60-93
+#SBATCH --array=1-180
 
 # Load necessary modules
 
@@ -31,7 +31,7 @@ sample<-sort(floor(runif(n=l, min=1, max=10609))) # Samples without replacement 
 sample_list=allSNPs[sample,] # Extracts the sampled SNPs into a table
 # Load all of the seg files, extract the sampled snps and write the downsampled seg files
 segfiles<-list()
-for(k in c(1:26, 28:48)){
+for(k in c(1:26, 28:47)){
 filename1=paste0("~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 segfile<-read.table(filename1, header=F)
 segfiles[[k]]<-segfile
