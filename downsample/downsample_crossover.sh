@@ -4,42 +4,54 @@
 #SBATCH --output=/home4/eschwar3/CO_NCO/1.scripts/1.logs/Downsample_%a.out
 #SBATCH --array=60-93
 
+# Load necessary modules
+
 module load python/2.7.18
 module load R/4.1.0
 
+# Move to location of important files
+
 cd ~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/
 
+# Sets the scenario for the downsampling. Equivalent to the row number of the "downsample_aux.txt" file
+
 k=$SLURM_ARRAY_TASK_ID
+
+# From the current line number (k), we extract the SNP density (i) and replicate number (j)
 
 i=$(awk 'NR=='$k' {print $1}' downsample_aux.txt)
 j=$(awk 'NR=='$k' {print $2}' downsample_aux.txt)
 seed=$(awk 'NR=='$k' {print $3}' downsample_aux.txt)
 
-Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt")
-i='$i'
-set.seed('$seed')
-if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL}
-samp=sample(1:10609, l, F)
-sample_list=allSNPs[samp,]
-# This is where I need to load all of the seg files, extract the sampled snps and write the downsampled seg files
+Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt") # Read in the positions of SNPs to be downsampled (chr pos)
+i='$i' # Set the SNP density
+set.seed('$k') # Sets a seed for the specific run
+if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL} # Establishes the number of SNPs to be sampled (# of SNPs in the region * (desired SNP density / observed SNP density))
+sample<-sort(floor(runif(n=l, min=1, max=10609))) # Samples without replacement from the number of SNPs
+sample_list=allSNPs[sample,] # Extracts the sampled SNPs into a table
+# Load all of the seg files, extract the sampled snps and write the downsampled seg files
 segfiles<-list()
 for(k in c(1:26, 28:48)){
 filename1=paste0("~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 segfile<-read.table(filename1, header=F)
 segfiles[[k]]<-segfile
-segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<14),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,2]<236000),], segfiles[[k]][which(segfiles[[k]][,1] == 14 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,2]>430000),], segfiles[[k]][which(segfiles[[k]][,1]>14),])
+segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<14),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,3]<236000),], segfiles[[k]][which(segfiles[[k]][,1] == 14 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,3]<430000),], segfiles[[k]][which(segfiles[[k]][,1]>14),])
 filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/SRR1119200XSRR1119199_", k, ".txt")
 write.table(segfiles[[k]], filename, quote=F, col.names=F, row.names=F)
 }
-
+# This last part saves the sampled SNPs to a file
 write.table(sample_list, "subsample_'$i'/replicate_'$j'/sample_list.txt", quote=F, col.names=F, row.names=F)
 q()'
+
+# Move to the CrossOver folder and run CrossOver on the subsampled segfiles
 
 cd subsample_$i/replicate_$j/CrossOver_v6.3
 
 for file in `ls segfiles`; do sed -i 's/ /	/g' segfiles/$file; done
 
 python2 crossOver.py
+
+# Prep CrossOver output for loading into R
 
 cd out/SRR1119200XSRR1119199
 
@@ -52,6 +64,8 @@ sed -i 's/YJM SNP/YJM.SNP/g' TractList_SRR1119200XSRR1119199.txt
 sed -i 's/_//g' TractList_SRR1119200XSRR1119199.txt
 sed -i 's/\[/"\[/g' TractList_SRR1119200XSRR1119199.txt
 sed -i 's/\]/\]"/g' TractList_SRR1119200XSRR1119199.txt
+
+# Loads output into R and extract the average number of CO and NCO for subsampled and not subsampled segfiles
 
 Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt",header=T)
 NCOs1_raw<-read.table("TractList_SRR1119200XSRR1119199.txt",header=T)
