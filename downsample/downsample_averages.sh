@@ -19,7 +19,11 @@ dens<-c(1,1.58,2,4,8,11.9,16,32,40)
 for(k in 1:9){
 filename<-paste0("subsample_", dens[k], "/tables/CO_NCO_", dens[k], "_table.txt")
 CO_NCO_list[[k]]<-read.table(filename)
+<<<<<<< HEAD
 CO_NCO_table<-rbind(CO_NCO_table,data.frame(CO_mean=mean(CO_NCO_list[[k]][,1]), CO_se=std.err(CO_NCO_list[[k]][,1]), NCO_mean=mean(CO_NCO_list[[k]][,3]), NCO_se=std.err(CO_NCO_list[[k]][,3])))
+=======
+CO_NCO_table[k,]<-data.frame(CO_mean=mean(CO_NCO_list[[k]][,1]), CO_se=ste.err(CO_NCO_list[[k]][,1]), NCO_mean=mean(CO_NCO_list[[k]][,3]), CO_mean=std.err(CO_NCO_list[[k]][,3]))
+>>>>>>> 23f734d4b228d29a2242253d2b66713d3296589d
 }
 rownames(CO_NCO_table)=dens
 write.table(CO_NCO_table, "CO_NCO_table.txt", quote=F)'
