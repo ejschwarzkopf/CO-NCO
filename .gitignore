@@ -1,2 +1,17 @@
 Users/
 1.logs/
+.DS_Store
+MultipleTetradCrossOver.sh
+ParentFilter.sh
+ParentFilterGenotype.sh
+ParentFilterJoingGenotype.sh
+TetradFilterRecombinePrep.sh
+rename_fastq.sh
+runGVCF.sh
+runSeqAlignPEVariantCall.sh
+runSeqAlignPEVariantCall_CO-NCO_ejs.sh
+runSeqAlignPEVariantCall_O_CO-NCO_ejs.sh
+runSeqAlignPEVariantCall_P2_CO-NCO_ejs.sh
+runSeqAlignVariantCall.sh
+runSeqAlignVariantCall_CO-NCO_ejs.sh
+rusSeqAlignVariantCall_P_CO-NCO_ejs.sh
