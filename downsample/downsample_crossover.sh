@@ -2,42 +2,120 @@
 #SBATCH -J Downsample
 #SBATCH --error=/home4/eschwar3/CO_NCO/1.scripts/1.logs/Downsample_%a.err
 #SBATCH --output=/home4/eschwar3/CO_NCO/1.scripts/1.logs/Downsample_%a.out
-#SBATCH --array=1-180
+#SBATCH --array=1-200
+
+# External variables
+
+die() {
+        printf '%s\n' "$1" >&2
+        exit 1
+}
+
+help() {
+  echo "Usage: $(basename $0) [-h] [-c CHROMOSOME] [-s START_POS] [-e END_POS] [-d DIRECTORY] [-a AUX_FILE_DIRECTORY]"
+  echo "Options:"
+  echo "  -h, --help     Display this help message"
+  echo "  -c, --chrom    Set chromosome for the introgression"
+  echo "  -s, --start    Set starting position for the introgression"
+  echo "  -e, --end      Set end position for the introgression"
+  echo "  -d, --dir      Set output directory"
+  echo "  -a, --aux      Set auxiliary file for the script"
+  echo "  -p, --pos      Set possible SNPs file"
+  echo "  -x, --cross    Set cross name"
+  exit 0
+}
+
+chrom=14
+start=18500
+end=586500
+dir=~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/
+#dir=~/CO_NCO/1.scripts
+aux=~/CO_NCO/2.aux/downsample_aux.txt
+pos=possibleSNPs.txt
+cross=SRR1119200XSRR1119199
+
+while getopts ":c:s:e:d:a:" opt ; do
+	case $opt in
+		h) help ;;
+		c) chrom=$OPTARG ;;
+                s) start=$OPTARG ;;
+                e) end=$OPTARG ;;
+                d) dir=$OPTARG ;;
+                a) aux=$OPTARG ;;
+		p) pos=$OPTARG ;;
+		x) cross=$OPTARG ;;
+		\?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+        esac
+done
+
+echo "chrom = "$chrom
+echo "start = "$start
+echo "end = "$end
+shift "$((OPTIND-1))"
+
 
 # Load necessary modules
 
 module load python/2.7.18
 module load R/4.1.0
 
-# Move to location of important files
+# Move to location of downsample output files
 
-cd ~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/
+cd $dir
+
+echo "dir = "$dir
 
 # Sets the scenario for the downsampling. Equivalent to the row number of the "downsample_aux.txt" file
 
 k=$SLURM_ARRAY_TASK_ID
+echo "k = "$k
 
 # From the current line number (k), we extract the SNP density (i) and replicate number (j)
 
-i=$(awk 'NR=='$k' {print $1}' downsample_aux.txt)
-j=$(awk 'NR=='$k' {print $2}' downsample_aux.txt)
-seed=$(awk 'NR=='$k' {print $3}' downsample_aux.txt)
+i=$(awk 'NR=='$k' {print $1}' $aux)
+j=$(awk 'NR=='$k' {print $2}' $aux)
+
+if [ $k -eq 1 ]
+then
+	awk '$1=='$chrom' && $2>'$start' && $2<'$end' {print}' $pos > downsample_SNPs.txt
+	
+	for n in 0.05 0.75 1.95 2.95 4.45 7.87 14 1.35 3.225 1000; do
+		for m in `seq 1 20`; do
+			cp downsample_SNPs.txt subsample_$n/replicate_$m
+		done
+	done
+else
+	sleep 1.5m
+fi
+
+echo $i
+echo $j
+
+#seed=${chrom}${i}${j}${k}
+seed=$(awk 'NR=='$k' {print $3}' $aux)
 
 Rscript -e 'allSNPs<-read.table("subsample_'$i'/replicate_'$j'/downsample_SNPs.txt") # Read in the positions of SNPs to be downsampled (chr pos)
 i='$i' # Set the SNP density
-set.seed('$k') # Sets a seed for the specific run
-if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL} # Establishes the number of SNPs to be sampled (# of SNPs in the region * (desired SNP density / observed SNP density))
-sample<-sort(floor(runif(n=l, min=1, max=10609))) # Samples without replacement from the number of SNPs
+set.seed('$seed') # Sets a seed for the specific run
+print("'$seed'")
+length=(allSNPs[nrow(allSNPs),2] - allSNPs[1,2])
+l=round((length * i)/1000)
+#if(i==1){l=194}else if(i==1.58){l=307}else if(i==2){l=388}else if(i==4){l=776}else if(i==8){l=1552}else if(i==11.9){l=2309}else if(i==16){l=3104}else if(i==32){l=6208}else if(i==40){l=7760}else{NULL} # Establishes the number of SNPs to be sampled (# of SNPs in the region * (desired SNP density / observed SNP density))
+#sample<-sort(floor(runif(n=l, min=1, max=nrow(allSNPs)))) # Samples without replacement from the number of SNPs
+if(l>nrow(allSNPs)){l=nrow(allSNPs)}
+print(l)
+sample<-sort(sample(x=1:nrow(allSNPs), size = l, replace = FALSE)) # Similar to the commented out line above, but this time sample without replacement
 sample_list=allSNPs[sample,] # Extracts the sampled SNPs into a table
 # Load all of the seg files, extract the sampled snps and write the downsampled seg files
 segfiles<-list()
-for(k in c(1:26, 28:47)){
-filename1=paste0("~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/segfiles/SRR1119200XSRR1119199_", k, ".txt")
+segfiles_down<-list()
+for(k in c(1:26, 28:48)){
+filename1=paste0("'$dir'segfiles/'$cross'_", k, ".txt")
 segfile<-read.table(filename1, header=F)
 segfiles[[k]]<-segfile
-segfiles[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<14),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,3]<236000),], segfiles[[k]][which(segfiles[[k]][,1] == 14 & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]==14 & segfiles[[k]][,3]<430000),], segfiles[[k]][which(segfiles[[k]][,1]>14),])
-filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/SRR1119200XSRR1119199_", k, ".txt")
-write.table(segfiles[[k]], filename, quote=F, col.names=F, row.names=F)
+segfiles_down[[k]]=rbind(segfiles[[k]][which(segfiles[[k]][,1]<'$chrom'),], segfiles[[k]][which(segfiles[[k]][,1]=='$chrom' & segfiles[[k]][,2]<'$start'),], segfiles[[k]][which(segfiles[[k]][,1] == '$chrom' & segfiles[[k]][,2] %in% sample_list[,2]),], segfiles[[k]][which(segfiles[[k]][,1]=='$chrom' & segfiles[[k]][,2]>'$end'),], segfiles[[k]][which(segfiles[[k]][,1]>'$chrom'),])
+filename=paste0("subsample_'$i'/replicate_'$j'/CrossOver_v6.3/segfiles/'$cross'_", k, ".txt")
+write.table(segfiles_down[[k]], filename, quote=F, col.names=F, row.names=F)
 }
 # This last part saves the sampled SNPs to a file
 write.table(sample_list, "subsample_'$i'/replicate_'$j'/sample_list.txt", quote=F, col.names=F, row.names=F)
@@ -47,29 +125,29 @@ q()'
 
 cd subsample_$i/replicate_$j/CrossOver_v6.3
 
-for file in `ls segfiles`; do sed -i 's/ /	/g' segfiles/$file; done
+for file in `seq 1 26` `seq 28 48`; do sed -i 's/ /	/g' segfiles/${cross}_$file.txt; done
 
 python2 crossOver.py
 
 # Prep CrossOver output for loading into R
 
-cd out/SRR1119200XSRR1119199
+cd out/$cross
 
-sed -i 's/\[/"\[/g' CoList_SRR1119200XSRR1119199.txt
-sed -i 's/\]/\]"/g' CoList_SRR1119200XSRR1119199.txt
-sed -i 's/#//g' CoList_SRR1119200XSRR1119199.txt
+sed -i 's/\[/"\[/g' CoList_$cross.txt
+sed -i 's/\]/\]"/g' CoList_$cross.txt
+sed -i 's/#//g' CoList_$cross.txt
 
-sed -i 's/#//g' TractList_SRR1119200XSRR1119199.txt
-sed -i 's/YJM SNP/YJM.SNP/g' TractList_SRR1119200XSRR1119199.txt
-sed -i 's/_//g' TractList_SRR1119200XSRR1119199.txt
-sed -i 's/\[/"\[/g' TractList_SRR1119200XSRR1119199.txt
-sed -i 's/\]/\]"/g' TractList_SRR1119200XSRR1119199.txt
+sed -i 's/#//g' TractList_$cross.txt
+sed -i 's/YJM SNP/YJM.SNP/g' TractList_$cross.txt
+sed -i 's/_//g' TractList_$cross.txt
+sed -i 's/\[/"\[/g' TractList_$cross.txt
+sed -i 's/\]/\]"/g' TractList_$cross.txt
 
 # Loads output into R and extract the average number of CO and NCO for subsampled and not subsampled segfiles
 
-Rscript -e 'COs1<-read.table("CoList_SRR1119200XSRR1119199.txt",header=T)
-NCOs1_raw<-read.table("TractList_SRR1119200XSRR1119199.txt",header=T)
-NCOs1<-NCOs1_raw[which(NCOs1_raw$marker>=3),]
+Rscript -e 'COs1<-read.table("CoList_'$cross'.txt",header=T)
+NCOs1_raw<-read.table("TractList_'$cross'.txt",header=T)
+NCOs1<-NCOs1_raw[which(NCOs1_raw$marker>=3&NCOs1_raw$tractminlen!=0&NCOs1_raw$tractlen<=10000),]
 Suva_chrom_length<-read.table("~/CO_NCO/2.data/Suva_chrom_length.txt")
 COs1_1<-COs1[which(COs1$chr==1),]
 COs1_2<-COs1[which(COs1$chr==2),]
@@ -152,14 +230,23 @@ COs1_count_14$NCOcount=apply(COs1_count_14,1,function(x){length(which(NCOs1_14$p
 COs1_count_15$NCOcount=apply(COs1_count_15,1,function(x){length(which(NCOs1_15$pos.bp.>=x[2]&NCOs1_15$pos.bp.<=x[3]&NCOs1_15$tracttype!=1&NCOs1_15$tracttype!=10))})
 COs1_count_16$NCOcount=apply(COs1_count_16,1,function(x){length(which(NCOs1_16$pos.bp.>=x[2]&NCOs1_16$pos.bp.<=x[3]&NCOs1_16$tracttype!=1&NCOs1_16$tracttype!=10))})
 COs1_count_all=rbind(COs1_count_1,COs1_count_2,COs1_count_3,COs1_count_4,COs1_count_5,COs1_count_6,COs1_count_7,COs1_count_8,COs1_count_9,COs1_count_10,COs1_count_11,COs1_count_12,COs1_count_13,COs1_count_14,COs1_count_15,COs1_count_16)
-windows=which(COs1_count_all$chr==14&COs1_count_all$start>=236000&COs1_count_all$end<=430000)
-d=COs1_count_all[windows,]
-std.err <- function(x) sd(x)/sqrt(length(x))
-Count_output=data.frame(CO_mean=mean(d$COcount),CO_se=std.err(d$COcount),NCO_mean=mean(d$NCOcount),NCO_se=std.err(d$NCOcount))
-write.table(Count_output,"CO_NCO_table.txt",quote=F,row.names=F,col.names=F)'
+write.table(COs1_count_all, "COs_count_all.txt", quote=F,row.names=F,col.names=T)'
 
-mkdir ~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/subsample_$i/tables
-mv CO_NCO_table.txt ~/CO_NCO/3.output/2.CrossOver/SRR1119200XSRR1119199_Unmasked/subsampling/subsample_$i/tables/CO_NCO_table_$j.txt
+Rscript	-e 'COs1_count_all<-read.table("COs_count_all.txt", header=T)
+NCOs1_raw<-read.table("TractList_'$cross'.txt",header=T)
+NCOs1<-NCOs1_raw[which(NCOs1_raw$marker>=3&NCOs1_raw$tractminlen!=0&NCOs1_raw$tractlen<=10000),]
+d=COs1_count_all[which(COs1_count_all$chr=='$chrom'&COs1_count_all$end>='$start'&COs1_count_all$start<='$end'),]
+std.err<-function(x) sd(x)/sqrt(length(x))
+Count_output=data.frame(CO_mean=mean(d$COcount),CO_se=std.err(d$COcount),NCO_mean=mean(d$NCOcount),NCO_se=std.err(d$NCOcount))
+t_d=NCOs1[which(NCOs1$chr=='$chrom'&NCOs1$pos.bp>='$start'&NCOs1$pos.bp<='$end'),]
+Tract_output=data.frame(Tract_mean=mean(t_d$tractlen),Tract_se=std.err(t_d$tractlen),Tract_sd=sd(t_d$tractlen),Count_2kb=length(which(t_d$tractlen>=2000)),Count_5kb=length(which(t_d$tractlen>=5000)),Prop_2kb=length(which(t_d$tractlen>=2000))/nrow(t_d),Prop_5kb=length(which(t_d$tractlen>=5000))/nrow(t_d))
+Full_output=cbind(Count_output,Tract_output)' -e 'write.table(Full_output,"CO_NCO_table.txt",quote=F,row.names=F,col.names=F)
+print(Full_output)'
+
+#cut -d ' ' -f 2-8 CO_NCO_table.txt | tail -n 1 > tmp.txt
+#mv tmp.txt CO_NCO_table.txt
+mkdir ${dir}subsample_$i/tables
+mv CO_NCO_table.txt ${dir}subsample_$i/tables/CO_NCO_table_$j.txt
 
 
 
