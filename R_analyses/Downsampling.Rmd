@@ -1,0 +1,1494 @@
+---
+title: "Downsampling"
+author: "Enrique Schwarzkopf"
+date: "4/1/2024"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(ggpubr)
+library(knitr)
+```
+
+# Linear regression in uncorrected windows
+
+```{r raw_lm, echo=FALSE}
+
+COs12_count_all_raw=read.table("COs12_count_all_raw", header = TRUE)
+
+lm_raw_CO<-lm(COcount ~ SNPcount * Introgression, data = COs12_count_all_raw[which(COs12_count_all_raw$cross=="fermentation"),])
+lm_raw_NCO<-lm(NCOcount ~ SNPcount * Introgression, data = COs12_count_all_raw[which(COs12_count_all_raw$cross=="fermentation"),])
+
+kable(signif(data.frame(row.names = c("CO", "NCO"), 
+                 Inter=c(lm_raw_CO$coefficients[1], 
+                         lm_raw_NCO$coefficients[1]), 
+                 Inter_p=c(summary(lm_raw_CO)$coefficients[1,4], 
+                           summary(lm_raw_NCO)$coefficients[1,4]), 
+                 Mark_dens=c(lm_raw_CO$coefficients[2],
+                             lm_raw_NCO$coefficients[2]),
+                 Mark_dens_p=c(summary(lm_raw_CO)$coefficients[2,4],
+                               summary(lm_raw_NCO)$coefficients[2,4]),
+                 Intro=c(lm_raw_CO$coefficients[3],
+                         lm_raw_NCO$coefficients[3]),
+                 Intro_p=c(summary(lm_raw_CO)$coefficients[3,4],
+                           summary(lm_raw_NCO)$coefficients[3,4]),
+                 IntroXMark=c(lm_raw_CO$coefficients[4],
+                              lm_raw_NCO$coefficients[4]),
+                 IntroXMark_p=c(summary(lm_raw_CO)$coefficients[4,4],
+                                summary(lm_raw_NCO)$coefficients[4,4])), digits=4))
+
+```
+
+# Downsampling for introgressed regions
+
+## Introgression on chromosome 4
+
+```{r downsample_4, echo=FALSE, warning=FALSE}
+# Downsample
+
+# 4
+
+# Downsample_table_4<-read.table("CO_NCO_table_4.txt", header=T)
+
+# ggplot(data = Downsample_table_4) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (4)") +
+#   theme_minimal()
+
+# ggsave("Downsample_barplot_NCO_4.pdf", height = 5, width = 8)
+
+# ggplot(data = Downsample_table_4) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (4)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_4.pdf", height = 5, width = 8)
+
+# ggplot(data = Downsample_table_4) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (4)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_4.pdf", height = 5, width = 8)
+
+CO_NCO_table_all_4<-read.table("CO_NCO_table_all_4.txt")
+colnames(CO_NCO_table_all_4)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_4$dens==1000)
+Test_table_4<-CO_NCO_table_all_4[test,]
+CO_NCO_table_all_4<-CO_NCO_table_all_4[-test,]
+
+downsamp_lm_CO_4=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_4)
+downsamp_lm_NCO_4=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_4)
+downsamp_lm_Tract_4=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_4)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_4)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_4)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_4)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_4$coefficients[1], 
+                             downsamp_lm_CO_4$coefficients[1], 
+                             downsamp_lm_Tract_4$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_4)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_4)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_4)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_4$coefficients[2],
+                               downsamp_lm_CO_4$coefficients[2], 
+                               downsamp_lm_Tract_4$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_4)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_4)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_4)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_4)$r.squared,
+                                      summary(downsamp_lm_CO_4)$r.squared,
+                                      summary(downsamp_lm_Tract_4)$r.squared)), digits = 4)
+
+p_NCO_4<-ggplot(CO_NCO_table_all_4, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (4)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_4.pdf", height = 5, width = 8)
+
+p_CO_4<-ggplot(CO_NCO_table_all_4, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (4)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_4.pdf", height = 5, width = 8)
+
+p_tract_4<-ggplot(CO_NCO_table_all_4, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (4)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_4.pdf", height = 5, width = 8)
+
+p_2kb_4<-ggplot(CO_NCO_table_all_4, aes(x=dens, y=Count_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (4)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_4.pdf", height = 5, width = 8)
+
+p_5kb_4<-ggplot(CO_NCO_table_all_4, aes(x=dens, y=Count_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (4)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_4.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_4, p_CO_4, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_4, p_2kb_4, p_5kb_4, ncol=3, heights=4, widths=3.3)
+
+# #6
+# 
+# Downsample_table_6<-read.table("CO_NCO_table_6.txt", header=T)
+# 
+# ggplot(data = Downsample_table_6) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (6)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_6.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_6) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (6)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_6.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_6) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (6)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_6.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_6<-read.table("CO_NCO_table_all_6.txt")
+# colnames(CO_NCO_table_all_6)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_6)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_6)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_6)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_6)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_6)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_6)
+# 
+# ggplot(CO_NCO_table_all_6, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (6)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_6.pdf", height = 5, width = 8)
+# 
+# #7
+# 
+# Downsample_table_7<-read.table("CO_NCO_table_7.txt", header=T)
+# 
+# ggplot(data = Downsample_table_7) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (7)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_7.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_7) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (7)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_7.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_7) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (7)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_7.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_7<-read.table("CO_NCO_table_all_7.txt")
+# colnames(CO_NCO_table_all_7)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_7)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_7)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_7)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_7)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_7)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_7)
+# 
+# ggplot(CO_NCO_table_all_7, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (7)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_7.pdf", height = 5, width = 8)
+# 
+# 
+# #9
+# 
+# Downsample_table_9<-read.table("CO_NCO_table_9.txt", header=T)
+# 
+# ggplot(data = Downsample_table_9) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (9)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_9.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_9) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (9)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_9.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_9) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (9)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_9.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_9<-read.table("CO_NCO_table_all_9.txt")
+# colnames(CO_NCO_table_all_9)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_9)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_9)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_9)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_9)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_9)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_9)
+# 
+# ggplot(CO_NCO_table_all_9, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (9)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_9.pdf", height = 5, width = 8)
+# 
+# #10a
+# 
+# Downsample_table_10a<-read.table("CO_NCO_table_10a.txt", header=T)
+# 
+# ggplot(data = Downsample_table_10a) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (10a)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_10a.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_10a) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (10a)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_10a.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_10a) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (10a)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_10a.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_10a<-read.table("CO_NCO_table_all_10a.txt")
+# colnames(CO_NCO_table_all_10a)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_10a)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_10a)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_10a)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_10a)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_10a)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_10a)
+# 
+# ggplot(CO_NCO_table_all_10a, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (10a)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_10a.pdf", height = 5, width = 8)
+# 
+# #10b
+# 
+# Downsample_table_10b<-read.table("CO_NCO_table_10b.txt", header=T)
+# 
+# ggplot(data = Downsample_table_10b) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (10b)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_10b.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_10b) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (10b)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_10b.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_10b) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (10b)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_10b.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_10b<-read.table("CO_NCO_table_all_10b.txt")
+# colnames(CO_NCO_table_all_10b)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_10b)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_10b)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_10b)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_10b)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_10b)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_10b)
+# 
+# ggplot(CO_NCO_table_all_10b, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (10b)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_10b.pdf", height = 5, width = 8)
+# 
+# #13
+# 
+# Downsample_table_13<-read.table("CO_NCO_table_13.txt", header=T)
+# 
+# ggplot(data = Downsample_table_13) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (13)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_13.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_13) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (13)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_13.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_13) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (13)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_13.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_13<-read.table("CO_NCO_table_all_13.txt")
+# colnames(CO_NCO_table_all_13)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_13)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_13)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_13)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_13)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_13)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_13)
+# 
+# ggplot(CO_NCO_table_all_13, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (13)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_13.pdf", height = 5, width = 8)
+# 
+# 
+# # 14
+# 
+# Downsample_table_14<-read.table("CO_NCO_table_14.txt", header=T)
+# 
+# ggplot(data = Downsample_table_14) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (14)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_14.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_14) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (14)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_14.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_14) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (14)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_14.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_14<-read.table("CO_NCO_table_all_14.txt")
+# colnames(CO_NCO_table_all_14)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_14)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_14)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_14)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_14)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_14)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_14)
+# 
+# ggplot(CO_NCO_table_all_14, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (14)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_14.pdf", height = 5, width = 8)
+# 
+# #15
+# 
+# Downsample_table_15<-read.table("CO_NCO_table_15.txt", header=T)
+# 
+# ggplot(data = Downsample_table_15) +
+#   geom_bar(aes(x=as.factor(Density), y=NCO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(NCO_mean-NCO_se)/20, ymax=(NCO_mean+NCO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample NCO estimates (15)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_NCO_15.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_15) +
+#   geom_bar(aes(x=as.factor(Density), y=CO_mean/20), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(CO_mean-CO_se)/20, ymax=(CO_mean+CO_se)/20), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean CO per kb") +
+#   labs(title = "Downsample CO estimates (15)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_CO_15.pdf", height = 5, width = 8)
+# 
+# ggplot(data = Downsample_table_15) +
+#   geom_bar(aes(x=as.factor(Density), y=Tract_mean), stat="identity", fill="#2179B4") +
+#   geom_errorbar(aes(x=as.factor(Density), ymin=(Tract_mean-Tract_se), ymax=(Tract_mean+Tract_se)), width=0.4) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean Tract length") +
+#   labs(title = "Downsample Tract length estimates (15)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_barplot_tract_15.pdf", height = 5, width = 8)
+# 
+# CO_NCO_table_all_15<-read.table("CO_NCO_table_all_15.txt")
+# colnames(CO_NCO_table_all_15)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se")
+# 
+# downsamp_lm=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_15)
+# downsamp_lm_2=lm(formula = CO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_15)
+# downsamp_lm_NCO=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_15)
+# downsamp_lm_2_NCO=lm(formula = NCO_mean ~ dens + I(dens^2), data = CO_NCO_table_all_15)
+# downsamp_lm_3_NCO=lm(formula = NCO_mean ~ dens + I(dens^2) + I(dens^3), data = CO_NCO_table_all_15)
+# downsamp_lm_NCO_noint<-lm(formula = NCO_mean ~ 0 + dens, data = CO_NCO_table_all_15)
+# 
+# ggplot(CO_NCO_table_all_15, aes(x=dens, y=NCO_mean/20)) +
+#   geom_point() +
+#   geom_smooth(method='lm', formula = y ~ x) +
+#   xlab("SNP Density per kb") +
+#   ylab("Mean NCO per kb") +
+#   labs(title = "Downsample regression (15)") +
+#   theme_minimal()
+# 
+# ggsave("Downsample_regression_NCO_15.pdf", height = 5, width = 8)
+
+
+```
+
+\newpage
+## Introgression on chromosome 6
+
+```{r downsample_6, echo=FALSE}
+# Downsample
+
+# 6
+
+CO_NCO_table_all_6<-read.table("CO_NCO_table_all_6.txt")
+colnames(CO_NCO_table_all_6)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_6$dens==1000)
+Test_table_6<-CO_NCO_table_all_6[test,]
+CO_NCO_table_all_6<-CO_NCO_table_all_6 [-test,]
+
+downsamp_lm_CO_6=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_6)
+downsamp_lm_NCO_6=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_6)
+downsamp_lm_Tract_6=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_6)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_6$coefficients[1], 
+                             downsamp_lm_CO_6$coefficients[1], 
+                             downsamp_lm_Tract_6$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_6)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_6)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_6)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_6$coefficients[2],
+                               downsamp_lm_CO_6$coefficients[2], 
+                               downsamp_lm_Tract_6$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_6)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_6)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_6)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_6)$r.squared,
+                                      summary(downsamp_lm_CO_6)$r.squared,
+                                      summary(downsamp_lm_Tract_6)$r.squared)), digits = 4)
+
+
+p_NCO_6<-ggplot(CO_NCO_table_all_6, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (6)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_6.pdf", height = 5, width = 8)
+
+p_CO_6<-ggplot(CO_NCO_table_all_6, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (6)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_6.pdf", height = 5, width = 8)
+
+p_tract_6<-ggplot(CO_NCO_table_all_6, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (6)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_6.pdf", height = 5, width = 8)
+
+p_2kb_6<-ggplot(CO_NCO_table_all_6, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (6)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_6.pdf", height = 5, width = 8)
+
+p_5kb_6<-ggplot(CO_NCO_table_all_6, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (6)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_6.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_6, p_CO_6, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_6, p_2kb_6, p_5kb_6, ncol=3, heights=4, widths=3.3)
+```
+
+\newpage
+## Introgression on chromosome 7
+
+```{r downsample_7, echo=FALSE}
+# Downsample
+
+# 7
+
+CO_NCO_table_all_7<-read.table("CO_NCO_table_all_7.txt")
+colnames(CO_NCO_table_all_7)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_7$dens==1000)
+Test_table_7<-CO_NCO_table_all_7[test,]
+CO_NCO_table_all_7<-CO_NCO_table_all_7[-test,]
+
+downsamp_lm_CO_7=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_7)
+downsamp_lm_NCO_7=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_7)
+downsamp_lm_Tract_7=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_7)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_7$coefficients[1], 
+                             downsamp_lm_CO_7$coefficients[1], 
+                             downsamp_lm_Tract_7$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_7)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_7)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_7)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_7$coefficients[2],
+                               downsamp_lm_CO_7$coefficients[2], 
+                               downsamp_lm_Tract_7$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_7)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_7)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_7)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_7)$r.squared,
+                                      summary(downsamp_lm_CO_7)$r.squared,
+                                      summary(downsamp_lm_Tract_7)$r.squared)), digits = 4)
+
+
+p_NCO_7<-ggplot(CO_NCO_table_all_7, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (7)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_7.pdf", height = 5, width = 8)
+
+p_CO_7<-ggplot(CO_NCO_table_all_7, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (7)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_7.pdf", height = 5, width = 8)
+
+p_tract_7<-ggplot(CO_NCO_table_all_7, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (7)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_7.pdf", height = 5, width = 8)
+
+p_2kb_7<-ggplot(CO_NCO_table_all_7, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (7)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_7.pdf", height = 5, width = 8)
+
+p_5kb_7<-ggplot(CO_NCO_table_all_7, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (7)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_7.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_7, p_CO_7, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_7, p_2kb_7, p_5kb_7, ncol=3, heights=4, widths=3.3)
+```
+
+\newpage
+## Introgression on chromosome 9
+
+```{r downsample_9, echo=FALSE}
+# Downsample
+
+# 9
+
+CO_NCO_table_all_9<-read.table("CO_NCO_table_all_9.txt")
+colnames(CO_NCO_table_all_9)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_9$dens==1000)
+Test_table_9<-CO_NCO_table_all_9[test,]
+CO_NCO_table_all_9<-CO_NCO_table_all_9[-test,]
+
+downsamp_lm_CO_9=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_9)
+downsamp_lm_NCO_9=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_9)
+downsamp_lm_Tract_9=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_9)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_9$coefficients[1], 
+                             downsamp_lm_CO_9$coefficients[1], 
+                             downsamp_lm_Tract_9$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_9)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_9)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_9)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_9$coefficients[2],
+                               downsamp_lm_CO_9$coefficients[2], 
+                               downsamp_lm_Tract_9$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_9)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_9)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_9)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_9)$r.squared,
+                                      summary(downsamp_lm_CO_9)$r.squared,
+                                      summary(downsamp_lm_Tract_9)$r.squared)), digits = 4)
+
+
+p_NCO_9<-ggplot(CO_NCO_table_all_9, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (9)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_9.pdf", height = 5, width = 8)
+
+p_CO_9<-ggplot(CO_NCO_table_all_9, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (9)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_9.pdf", height = 5, width = 8)
+
+p_tract_9<-ggplot(CO_NCO_table_all_9, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (9)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_9.pdf", height = 5, width = 8)
+
+p_2kb_9<-ggplot(CO_NCO_table_all_9, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (9)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_9.pdf", height = 5, width = 8)
+
+p_5kb_9<-ggplot(CO_NCO_table_all_9, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (9)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_9.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_9, p_CO_9, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_9, p_2kb_9, p_5kb_9, ncol=3, heights=4, widths=3.3)
+```
+
+\newpage
+## Introgression on chromosome 10 (a)
+
+```{r downsample_10a, echo=FALSE}
+# Downsample
+
+# 10a
+
+CO_NCO_table_all_10a<-read.table("CO_NCO_table_all_10a.txt")
+colnames(CO_NCO_table_all_10a)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_10a$dens==1000)
+Test_table_10a<-CO_NCO_table_all_10a[test,]
+CO_NCO_table_all_10a<-CO_NCO_table_all_10a[-test,]
+
+downsamp_lm_CO_10a=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_10a)
+downsamp_lm_NCO_10a=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_10a)
+downsamp_lm_Tract_10a=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_10a)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_10a$coefficients[1], 
+                             downsamp_lm_CO_10a$coefficients[1], 
+                             downsamp_lm_Tract_10a$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_10a)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_10a)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_10a)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_10a$coefficients[2],
+                               downsamp_lm_CO_10a$coefficients[2], 
+                               downsamp_lm_Tract_10a$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_10a)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_10a)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_10a)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_10a)$r.squared,
+                                      summary(downsamp_lm_CO_10a)$r.squared,
+                                      summary(downsamp_lm_Tract_10a)$r.squared)), digits = 4)
+
+
+p_NCO_10a<-ggplot(CO_NCO_table_all_10a, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (10a)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_10a.pdf", height = 5, width = 8)
+
+p_CO_10a<-ggplot(CO_NCO_table_all_10a, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (10a)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_10a.pdf", height = 5, width = 8)
+
+p_tract_10a<-ggplot(CO_NCO_table_all_10a, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (10a)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_10a.pdf", height = 5, width = 8)
+
+p_2kb_10a<-ggplot(CO_NCO_table_all_10a, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (10a)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_10a.pdf", height = 5, width = 8)
+
+p_5kb_10a<-ggplot(CO_NCO_table_all_10a, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (10a)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_10a.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_10a, p_CO_10a, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_10a, p_2kb_10a, p_5kb_10a, ncol=3, heights=4, widths=3.3)
+```
+
+\newpage
+## Introgression on chromosome 10 (b)
+
+```{r downsample_10b, echo=FALSE}
+# Downsample
+
+# 10b
+
+CO_NCO_table_all_10b<-read.table("CO_NCO_table_all_10b.txt")
+colnames(CO_NCO_table_all_10b)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_10b$dens==1000)
+Test_table_10b<-CO_NCO_table_all_10b[test,]
+CO_NCO_table_all_10b<-CO_NCO_table_all_10b[-test,]
+
+downsamp_lm_CO_10b=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_10b)
+downsamp_lm_NCO_10b=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_10b)
+downsamp_lm_Tract_10b=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_10b)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_10b$coefficients[1], 
+                             downsamp_lm_CO_10b$coefficients[1], 
+                             downsamp_lm_Tract_10b$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_10b)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_10b)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_10b)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_10b$coefficients[2],
+                               downsamp_lm_CO_10b$coefficients[2], 
+                               downsamp_lm_Tract_10b$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_10b)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_10b)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_10b)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_10b)$r.squared,
+                                      summary(downsamp_lm_CO_10b)$r.squared,
+                                      summary(downsamp_lm_Tract_10b)$r.squared)), digits = 4)
+
+
+p_NCO_10b<-ggplot(CO_NCO_table_all_10b, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (10b)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_10b.pdf", height = 5, width = 8)
+
+p_CO_10b<-ggplot(CO_NCO_table_all_10b, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (10b)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_10b.pdf", height = 5, width = 8)
+
+p_tract_10b<-ggplot(CO_NCO_table_all_10b, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (10b)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_10b.pdf", height = 5, width = 8)
+
+p_2kb_10b<-ggplot(CO_NCO_table_all_10b, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (10b)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_10b.pdf", height = 5, width = 8)
+
+p_5kb_10b<-ggplot(CO_NCO_table_all_10b, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (10b)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_10b.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_10b, p_CO_10b, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_10b, p_2kb_10b, p_5kb_10b, ncol=3, heights=4, widths=3.3)
+```
+
+\newpage
+## Introgression on chromosome 13
+
+```{r downsample_13, echo=FALSE}
+# Downsample
+
+# 13
+
+CO_NCO_table_all_13<-read.table("CO_NCO_table_all_13.txt")
+colnames(CO_NCO_table_all_13)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_13$dens==1000)
+Test_table_13<-CO_NCO_table_all_13[test,]
+CO_NCO_table_all_13<-CO_NCO_table_all_13[-test,]
+
+downsamp_lm_CO_13=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_13)
+downsamp_lm_NCO_13=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_13)
+downsamp_lm_Tract_13=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_13)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_13$coefficients[1], 
+                             downsamp_lm_CO_13$coefficients[1], 
+                             downsamp_lm_Tract_13$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_13)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_13)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_13)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_13$coefficients[2],
+                               downsamp_lm_CO_13$coefficients[2], 
+                               downsamp_lm_Tract_13$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_13)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_13)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_13)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_13)$r.squared,
+                                      summary(downsamp_lm_CO_13)$r.squared,
+                                      summary(downsamp_lm_Tract_13)$r.squared)), digits = 4)
+
+
+p_NCO_13<-ggplot(CO_NCO_table_all_13, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (13)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_13.pdf", height = 5, width = 8)
+
+p_CO_13<-ggplot(CO_NCO_table_all_13, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (13)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_13.pdf", height = 5, width = 8)
+
+p_tract_13<-ggplot(CO_NCO_table_all_13, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (13)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_13.pdf", height = 5, width = 8)
+
+p_2kb_13<-ggplot(CO_NCO_table_all_13, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (13)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_13.pdf", height = 5, width = 8)
+
+p_5kb_13<-ggplot(CO_NCO_table_all_13, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (13)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_13.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_13, p_CO_13, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_13, p_2kb_13, p_5kb_13, ncol=3, heights=4, widths=3.3)
+```
+\newpage
+## Introgression on chromosome 14
+
+```{r downsample_14, echo=FALSE}
+# Downsample
+
+# 14
+
+CO_NCO_table_all_14<-read.table("CO_NCO_table_all_14.txt")
+colnames(CO_NCO_table_all_14)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_14$dens==1000)
+Test_table_14<-CO_NCO_table_all_14[test,]
+CO_NCO_table_all_14<-CO_NCO_table_all_14[-test,]
+
+downsamp_lm_CO_14=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_14)
+downsamp_lm_NCO_14=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_14)
+downsamp_lm_Tract_14=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_14)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_14$coefficients[1], 
+                             downsamp_lm_CO_14$coefficients[1], 
+                             downsamp_lm_Tract_14$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_14)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_14)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_14)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_14$coefficients[2],
+                               downsamp_lm_CO_14$coefficients[2], 
+                               downsamp_lm_Tract_14$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_14)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_14)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_14)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_14)$r.squared,
+                                      summary(downsamp_lm_CO_14)$r.squared,
+                                      summary(downsamp_lm_Tract_14)$r.squared)), digits = 4)
+
+
+p_NCO_14<-ggplot(CO_NCO_table_all_14, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (14)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_14.pdf", height = 5, width = 8)
+
+p_CO_14<-ggplot(CO_NCO_table_all_14, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (14)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_14.pdf", height = 5, width = 8)
+
+p_tract_14<-ggplot(CO_NCO_table_all_14, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (14)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_14.pdf", height = 5, width = 8)
+
+p_2kb_14<-ggplot(CO_NCO_table_all_14, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (14)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_14.pdf", height = 5, width = 8)
+
+p_5kb_14<-ggplot(CO_NCO_table_all_14, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (14)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_14.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_14, p_CO_14, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_14, p_2kb_14, p_5kb_14, ncol=3, heights=4, widths=3.3)
+```
+
+\newpage
+## Introgression on chromosome 15
+
+```{r downsample_15, echo=FALSE}
+# Downsample
+
+# 15
+
+CO_NCO_table_all_15<-read.table("CO_NCO_table_all_15.txt")
+colnames(CO_NCO_table_all_15)=c("dens", "CO_mean", "CO_se", "NCO_mean", "NCO_se", "Tract_mean", "Tract_se", "Tract_var", "Count_2kb", "Count_5kb", "Prop_2kb", "Prop_5kb")
+test<-which(CO_NCO_table_all_15$dens==1000)
+Test_table_15<-CO_NCO_table_all_15[test,]
+CO_NCO_table_all_15<-CO_NCO_table_all_15[-test,]
+
+downsamp_lm_CO_15=lm(formula = CO_mean ~ dens, data = CO_NCO_table_all_15)
+downsamp_lm_NCO_15=lm(formula = NCO_mean ~ dens, data = CO_NCO_table_all_15)
+downsamp_lm_Tract_15=lm(formula = Tract_mean ~ dens, data = CO_NCO_table_all_15)
+
+kable(data.frame(row.names = c("NCO", "CO", "Tract length"), 
+                 Intercept=c(downsamp_lm_NCO_15$coefficients[1], 
+                             downsamp_lm_CO_15$coefficients[1], 
+                             downsamp_lm_Tract_15$coefficients[1]), 
+                 Intercept_p=c(summary(downsamp_lm_NCO_15)$coefficients[1,4], 
+                               summary(downsamp_lm_CO_15)$coefficients[1,4], 
+                               summary(downsamp_lm_Tract_15)$coefficients[1,4]), 
+                 Marker_dens=c(downsamp_lm_NCO_15$coefficients[2],
+                               downsamp_lm_CO_15$coefficients[2], 
+                               downsamp_lm_Tract_15$coefficients[2]),
+                 Marker_dens_p=c(summary(downsamp_lm_NCO_15)$coefficients[2,4],
+                                 summary(downsamp_lm_CO_15)$coefficients[2,4],
+                                 summary(downsamp_lm_Tract_15)$coefficients[2,4]),
+                 Adjusted_R_squared=c(summary(downsamp_lm_NCO_15)$r.squared,
+                                      summary(downsamp_lm_CO_15)$r.squared,
+                                      summary(downsamp_lm_Tract_15)$r.squared)), digits = 4)
+
+
+p_NCO_15<-ggplot(CO_NCO_table_all_15, aes(x=dens, y=NCO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean NCO per kb") +
+  #labs(title = "Downsample regression (15)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_NCO_15.pdf", height = 5, width = 8)
+
+p_CO_15<-ggplot(CO_NCO_table_all_15, aes(x=dens, y=CO_mean/20)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean CO per kb") +
+  #labs(title = "Downsample regression (15)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_CO_15.pdf", height = 5, width = 8)
+
+p_tract_15<-ggplot(CO_NCO_table_all_15, aes(x=dens, y=Tract_mean)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Mean Tract Length") +
+  #labs(title = "Downsample (15)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_Tract_15.pdf", height = 5, width = 8)
+
+p_2kb_15<-ggplot(CO_NCO_table_all_15, aes(x=dens, y=Prop_2kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >2kb per kb") +
+  labs(title = "Downsample (15)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_2kb_15.pdf", height = 5, width = 8)
+
+p_5kb_15<-ggplot(CO_NCO_table_all_15, aes(x=dens, y=Prop_5kb)) +
+  geom_point() +
+  geom_smooth(method='lm', formula = y ~ x) +
+  xlab("SNP Density per kb") +
+  ylab("Proportion of NCOs >5kb per kb") +
+  labs(title = "Downsample (15)") +
+  theme_minimal()
+
+ggsave("Downsample_regression_5kb_15.pdf", height = 5, width = 8)
+
+ggarrange(p_NCO_15, p_CO_15, ncol=2, heights = 4, widths = 4)
+
+ggarrange(p_tract_15, p_2kb_15, p_5kb_15, ncol=3, heights=4, widths=3.3)
+```
+
+
+# Collected figures
+
+```{r all_graphs, echo=FALSE}
+
+ggarrange(p_NCO_4, p_CO_4, p_tract_4, ncol = 3, nrow=1, widths = 8.5/3, heights = 3)
+
+ggsave("CO_NCO_Tract_Downsample_4.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_6, p_CO_6, p_tract_6, ncol = 3, nrow=1, widths = 3.8, heights = 3.5)
+
+ggsave("CO_NCO_Tract_Downsample_6.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_7, p_CO_7, p_tract_7, ncol = 3, nrow=1, widths = 4, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_7.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_9, p_CO_9, p_tract_9, ncol = 3, nrow=1, widths = 3.8, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_9.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_10a, p_CO_10a, p_tract_10a, ncol = 3, nrow=1, widths = 3.8, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_10a.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_10b, p_CO_10b, p_tract_10b, ncol = 3, nrow=1, widths = 3.8, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_10b.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_13, p_CO_13, p_tract_13, ncol = 3, nrow=1, widths = 3.8, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_13.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_14, p_CO_14, p_tract_14, ncol = 3, nrow=1, widths = 3.8, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_14.png", device = png, height = 3, width=8.5, dpi=600)
+
+ggarrange(p_NCO_15, p_CO_15, p_tract_15, ncol = 3, nrow=1, widths = 3.8, heights = 4)
+
+ggsave("CO_NCO_Tract_Downsample_15.png", device = png, height = 3, width=8.5, dpi=600)
+
+
+
+
+```
+
+# Pairwise comparisons
+
+Pairwise Welch's t-tests for each of the introgressions. Each introgression is downsampled to 2.95 (the 75% density per kb quantile for non-introgressed regions). Their mean NCO count is then compared to the mean NCO count of no-introgressed windows in their chromosome which have a marker count of at least 39 (20 x the 50% density per kb quantile for non-introgressed regions).
+
+```{r pairwise, echo=FALSE}
+
+NCOs2_raw<-read.table("Cross2/TractList_SRR1119200XSRR1119199.txt", header=T)
+NCOs2<-NCOs2_raw[which(NCOs2_raw$marker>=3 & NCOs2_raw$tract_min_len!=0 & NCOs2_raw$tract_len<=10000),]
+remove<-c(which((NCOs2$chr==6 & NCOs2$pos.bp. > 199217 & NCOs2$pos.bp. < 199219)), which((NCOs2$chr==7 & NCOs2$pos.bp. > 440400 & NCOs2$pos.bp. < 441000)), which((NCOs2$chr==3 & NCOs2$pos.bp. > 260465 & NCOs2$pos.bp. < 260467)))
+if(length(remove!=0)){
+NCOs2<-NCOs2[-remove,]
+}
+
+dens=2.95
+SNPcount=27
+
+down=list()
+
+down[[1]]<-CO_NCO_table_all_4$NCO_mean[which(CO_NCO_table_all_4$dens==dens)]
+down[[2]]<-CO_NCO_table_all_6$NCO_mean[which(CO_NCO_table_all_6$dens==dens)]
+down[[3]]<-CO_NCO_table_all_7$NCO_mean[which(CO_NCO_table_all_7$dens==dens)]
+down[[4]]<-CO_NCO_table_all_9$NCO_mean[which(CO_NCO_table_all_9$dens==dens)]
+down[[5]]<-CO_NCO_table_all_10a$NCO_mean[which(CO_NCO_table_all_10a$dens==dens)]
+down[[6]]<-CO_NCO_table_all_10b$NCO_mean[which(CO_NCO_table_all_10b$dens==dens)]
+down[[7]]<-CO_NCO_table_all_13$NCO_mean[which(CO_NCO_table_all_13$dens==dens)]
+down[[8]]<-CO_NCO_table_all_14$NCO_mean[which(CO_NCO_table_all_14$dens==dens)]
+down[[9]]<-CO_NCO_table_all_15$NCO_mean[which(CO_NCO_table_all_15$dens==dens)]
+
+nonintro<-list()
+
+nonintro[[1]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==4)]
+nonintro[[2]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==6)]
+nonintro[[3]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==7)]
+nonintro[[4]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==9)]
+nonintro[[5]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==10)]
+nonintro[[6]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==10)]
+nonintro[[7]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==13)]
+nonintro[[8]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==14)]
+nonintro[[9]]<-COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$Introgression==0 & COs12_count_all_raw$SNPcount>=SNPcount & COs12_count_all_raw$chr==15)]
+
+comp_p<-c()
+
+for(i in 1:9){
+  comp_p[i]<-wilcox.test(down[[i]], nonintro[[i]], var.equal = FALSE)$p.value
+}
+
+
+comps<-data.frame(row.names = c("4", "6", "7", "9", "10a", "10b", "13", "14", "15"), Downsampled_median=sapply(down, median)/(20*47), NonIntrogressed_median=sapply(nonintro,median)/(20*47), wilcoxson_p=comp_p)
+
+kable(comps, caption = "T-tests")
+
+table_2kb<-data.frame(Down=c(Test_table_4$Count_2kb[1],
+                        Test_table_6$Count_2kb[1],
+                        Test_table_7$Count_2kb[1],
+                        Test_table_9$Count_2kb[1],
+                        Test_table_10a$Count_2kb[1],
+                        Test_table_10b$Count_2kb[1],
+                        Test_table_13$Count_2kb[1],
+                        Test_table_14$Count_2kb[1],
+                        Test_table_15$Count_2kb[1]), Obs=c(length(which(NCOs2$tract_len>2000 & NCOs2$chr==4 & NCOs2$pos.bp.>866500 & NCOs2$pos.bp.<983774)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==6 & NCOs2$pos.bp.>1 & NCOs2$pos.bp.<65500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==7 & NCOs2$pos.bp.>1 & NCOs2$pos.bp.<53500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==9 & NCOs2$pos.bp.>158500 & NCOs2$pos.bp.<298500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==10 & NCOs2$pos.bp.>234500 & NCOs2$pos.bp.<288500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==10 & NCOs2$pos.bp.>301500 & NCOs2$pos.bp.<428500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==13 & NCOs2$pos.bp.>26500 & NCOs2$pos.bp.<103500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==14 & NCOs2$pos.bp.>18500 & NCOs2$pos.bp.<586500)),
+                                                     length(which(NCOs2$tract_len>2000 & NCOs2$chr==15 & NCOs2$pos.bp.>367500 & NCOs2$pos.bp.<434500))))
+
+kable(table_2kb, caption = "Number of NCOs >2kb in full sample downsample and original data")
+
+table_5kb<-data.frame(Down=c(Test_table_4$Count_5kb[1],
+                        Test_table_6$Count_5kb[1],
+                        Test_table_7$Count_5kb[1],
+                        Test_table_9$Count_5kb[1],
+                        Test_table_10a$Count_5kb[1],
+                        Test_table_10b$Count_5kb[1],
+                        Test_table_13$Count_5kb[1],
+                        Test_table_14$Count_5kb[1],
+                        Test_table_15$Count_5kb[1]), Obs=c(length(which(NCOs2$tract_len>5000 & NCOs2$chr==4 & NCOs2$pos.bp.>866500 & NCOs2$pos.bp.<983774)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==6 & NCOs2$pos.bp.>1 & NCOs2$pos.bp.<65500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==7 & NCOs2$pos.bp.>1 & NCOs2$pos.bp.<53500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==9 & NCOs2$pos.bp.>158500 & NCOs2$pos.bp.<298500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==10 & NCOs2$pos.bp.>234500 & NCOs2$pos.bp.<288500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==10 & NCOs2$pos.bp.>301500 & NCOs2$pos.bp.<428500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==13 & NCOs2$pos.bp.>26500 & NCOs2$pos.bp.<103500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==14 & NCOs2$pos.bp.>18500 & NCOs2$pos.bp.<586500)),
+                                                     length(which(NCOs2$tract_len>5000 & NCOs2$chr==15 & NCOs2$pos.bp.>367500 & NCOs2$pos.bp.<434500))))
+
+kable(table_5kb, caption = "Number of NCOs >5kb in full sample downsample and original data")
+
+table_NCO_mean<-data.frame(Down=c(Test_table_4$NCO_mean[1],
+                        Test_table_6$NCO_mean[1],
+                        Test_table_7$NCO_mean[1],
+                        Test_table_9$NCO_mean[1],
+                        Test_table_10a$NCO_mean[1],
+                        Test_table_10b$NCO_mean[1],
+                        Test_table_13$NCO_mean[1],
+                        Test_table_14$NCO_mean[1],
+                        Test_table_15$NCO_mean[1]), Obs=c(mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==4 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==6 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==7 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==9 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==10 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$end<=300000)]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==10 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation" & COs12_count_all_raw$start>=300000)]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==13 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==14 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")]),
+                                                     mean(COs12_count_all_raw$NCOcount[which(COs12_count_all_raw$chr==15 & COs12_count_all_raw$Introgression==1 & COs12_count_all_raw$cross=="fermentation")])))
+
+kable(table_NCO_mean, caption = "Average number of NCOs in full sample downsample and original data")
+
+```

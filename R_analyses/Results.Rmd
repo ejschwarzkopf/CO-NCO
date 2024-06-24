@@ -1,0 +1,1138 @@
+---
+title: "Results"
+author: "Enrique Schwarzkopf"
+date: "8/22/2023"
+output:
+  html_document:
+    df_print: paged
+  word_document: default
+  pdf_document:
+    fig_caption: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+
+# set the working directory
+
+setwd("~/Documents/NCSU/CO_NCO/Data/")
+
+# load required packages
+
+library(ggplot2)
+library(plotrix)
+library(ggcorrplot)
+library(ggpubr)
+library(reshape2)
+library(pscl)
+library(MASS)
+library(knitr)
+
+# Colorblind friendly pallettes
+
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+cbbPalette <- c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+# Load homology files, chromosome sizes and CO/NCO table
+
+homfile1=read.table("Cross1/SRR1119189XSRR1119180_HOMOLOGY_SEGTFILE.txt", header = F)
+colnames(homfile1)=c("chr", "pos", "hom")
+homfile2=read.table("Cross2/SRR1119200XSRR1119199_HOMOLOGY_SEGTFILE.txt", header=F)
+colnames(homfile2)=c("chr", "pos", "hom")
+
+Suva_chrom_length<-read.table("Cross1/Suva_chrom_length.txt")
+
+COs12_count_all_final<-read.table("CO_NCO_Model_Table_final_GC.txt", header=T)
+
+COs1_tetrad<-read.table("Cross1/CoList_SRR1119189XSRR1119180.txt", header = T)
+
+COs2_tetrad<-read.table("Cross2/CoList_SRR1119200XSRR1119199.txt", header=T)
+
+COs1<-read.table("Cross1/CleanCOs1.txt", header=T)
+NCOs1_raw<-read.table("Cross1/TractList_SRR1119189XSRR1119180.txt", header=T)
+NCOs1<-NCOs1_raw[which(NCOs1_raw$marker>=3 & NCOs1_raw$tractminlen!=0 & NCOs1_raw$tractlen<=10000 & NCOs1_raw$tracttype!=10),]
+remove<-which(NCOs1$chr==7 & NCOs1$pos.bp. > 31094 & NCOs1$pos.bp. < 31096)
+if(length(remove)!=0){
+NCOs1<-NCOs1[-remove,]
+}
+Window_prob_1<-c(read.table("Window_prob_1.txt")$x)
+
+COs2<-read.table("Cross2/CleanCOs2.txt", header=T)
+NCOs2_raw<-read.table("Cross2/TractList_SRR1119200XSRR1119199.txt", header=T)
+NCOs2<-NCOs2_raw[which(NCOs2_raw$marker>=3 & NCOs2_raw$tract_min_len!=0 & NCOs2_raw$tract_len<=10000 & NCOs2_raw$tract_type!=10),]
+remove<-c(which((NCOs2$chr==6 & NCOs2$pos.bp. > 199217 & NCOs2$pos.bp. < 199219)), which((NCOs2$chr==7 & NCOs2$pos.bp. > 440400 & NCOs2$pos.bp. < 441000)), which((NCOs2$chr==3 & NCOs2$pos.bp. > 260465 & NCOs2$pos.bp. < 260467)))
+if(length(remove!=0)){
+NCOs2<-NCOs2[-remove,]
+}
+Window_prob_2<-c(read.table("Window_prob_2.txt")$x)
+
+Suva_chrom_length_introgressed<-data.frame(chr=c(4,6,7,9,10,10,13,14,15), start=c(866500, 1, 1, 158500, 234500, 301500, 26500, 18500, 367500), end=c(983774, 65500, 53500, 298500, 288500, 428500, 103500, 586500, 434500))
+
+segfiles_fer<-lapply(Sys.glob("Rbar/SRR1119200XSRR1119199/SRR1119200XSRR1119199_gamete_*.txt"), read.table)
+segfiles_fer<-lapply(segfiles_fer, setNames, c("chr", "pos", "parent"))
+
+segfiles_nat<-lapply(Sys.glob("Rbar/SRR1119189XSRR1119180/SRR1119189XSRR1119180_gamete_*.txt"), read.table)
+segfiles_nat<-lapply(segfiles_nat, setNames, c("chr", "pos", "parent"))
+```
+
+## Description of the CO/NCO maps
+
+We were able to detect an average of 82.54 COs (SE 1.5) and 60.44 NCOs (SE 2.7) per tetrad in our natural cross and 63.66 COs (SE 1.9) and 68.1 NCOs (SE 12.47) per tetrad in our fermentation cross. The number of COs per tetrad in the natural and fermentation crosses are slightly higher than those of *S. paradoxus* and *S. cerevisciae* respectively, while both our crosses have NCO averages higher than those of *S. cerevisciae* and *S. paradoxus* (Figure \ref{fig:barplot}; Tables 1 & 2; Liu et al. 2019).
+
+```{r barplots, echo=FALSE, fig.height=5, fig.cap="\\label{fig:barplot}Barplot depicting the number of COs and NCOs detected per tetrad. The error bars represent the standard error around the mean. These values are not corrected by resolution. The counts for *S. paradoxus* and *S. cerevisciae* are taken from Liu et al. (2019)."}
+
+# Calculate per chromosome CO/tetrad, NCO/tetrad, CO/NCO/tetrad
+
+COs1_per_tetrad<-c()
+for(i in 1:48){
+  COs1_per_tetrad<-c(COs1_per_tetrad, nrow(COs1_tetrad[which(COs1_tetrad$tetrad==i),]))
+}
+
+NCOs1_per_tetrad<-c()
+for(i in 1:48){
+  NCOs1_per_tetrad<-c(NCOs1_per_tetrad, nrow(NCOs1[which(NCOs1$tetrad==i),]))
+}
+
+CO_NCO_barplot_1<-data.frame(type=c("CO", "NCO"), count=c(mean(x=COs1_per_tetrad), mean(x=NCOs1_per_tetrad)), se=c(std.error(x = COs1_per_tetrad), std.error(x=NCOs1_per_tetrad)))
+
+COs2_per_tetrad<-c()
+for(i in 1:47){
+  COs2_per_tetrad<-c(COs2_per_tetrad, nrow(COs2_tetrad[which(COs2_tetrad$tetrad==i),]))
+}
+
+NCOs2_per_tetrad<-c()
+for(i in 1:47){
+  NCOs2_per_tetrad<-c(NCOs2_per_tetrad, nrow(NCOs2[which(NCOs2$tetrad==i),]))
+}
+
+CO_NCO_barplot_2<-data.frame(type=c("CO", "NCO"), count=c(mean(x=COs2_per_tetrad), mean(x=NCOs2_per_tetrad)), se=c(std.error(x = COs2_per_tetrad), std.error(x=NCOs2_per_tetrad)))
+
+CO_NCO_barplot_12<-rbind(CO_NCO_barplot_1, CO_NCO_barplot_2)
+
+CO_NCO_barplot_12$cross=c(rep("natural", nrow(CO_NCO_barplot_1)), rep("fermentation", nrow(CO_NCO_barplot_2)))
+
+# ggplot(data=CO_NCO_barplot_12, aes(x=type, y=count, fill=cross)) + 
+#   geom_bar(stat = "identity", position = position_dodge(), width = 0.4) + 
+#   geom_errorbar(aes(ymin=count-se, ymax=count+se), position = position_dodge(.4), width=.1) +
+#   theme_minimal() +
+#   #theme(legend.position = "none") +
+#   scale_fill_brewer(palette = "Paired") +
+#   #geom_segment(x = 0.6, xend = 1.2, y = CO_NCO_barplot_12$count[3]*1.11, yend = CO_NCO_barplot_12$count[3]*1.11, color="red", size = 1, linetype=2) +
+#   #geom_segment(x = 1.6, xend = 2.2, y = CO_NCO_barplot_12$count[4]*1.11, yend = CO_NCO_barplot_12$count[4]*1.11, color="red", size = 1, linetype=2) +
+#   NULL
+# 
+# ggsave("CO_NCO_barplot_genome_cross12.pdf", height = 5, width = 8)
+
+p_bars<-ggplot(data=CO_NCO_barplot_12, aes(x=type, y=count, fill=cross)) + 
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.4, color="black") + 
+  scale_fill_manual(values = c("#C38080", "#004D40")) +
+  geom_errorbar(aes(ymin=count-se, ymax=count+se), position = position_dodge(.4), width=.1) +
+  theme_bw() +
+  #theme(legend.position = "none") +
+  #scale_fill_brewer(palette = "Paired") +
+  #geom_segment(x = 0.6, xend = 1.2, y = CO_NCO_barplot_12$count[3]*1.11, yend = CO_NCO_barplot_12$count[3]*1.11, color="red", size = 1, linetype=2) +
+  #geom_segment(x = 1.6, xend = 2.2, y = CO_NCO_barplot_12$count[4]*1.11, yend = CO_NCO_barplot_12$count[4]*1.11, color="red", size = 1, linetype=2) +
+  geom_segment(x = 1.2, xend = 1.3, y = 54.8, yend = 54.8, color="black", size = 0.6, linetype=1, arrow = arrow(length=unit(0.25, "cm"), ends="first")) +
+  geom_segment(x = 1.7, xend = 1.8, y = 26.9, yend = 26.9, color="black", size = 0.6, linetype=1, arrow = arrow(length=unit(0.25, "cm"), ends="last")) +
+  geom_segment(x = 1.2, xend = 1.3, y = 76.5, yend = 76.5, color="black", size = 0.6, linetype=1, arrow = arrow(length=unit(0.25, "cm"), ends="first")) +
+  geom_segment(x = 1.7, xend = 1.8, y = 46.4, yend = 46.4, color="black", size = 0.6, linetype=1, arrow = arrow(length=unit(0.25, "cm"), ends="last")) +
+  annotate(geom = "text", x=1.38, y=54.8, label="S. par", fontface="italic") +
+  annotate(geom = "text", x=1.62, y=26.9, label="S. par", fontface="italic") +
+  annotate(geom = "text", x=1.38, y=76.5, label="S. cer", fontface="italic") +
+  annotate(geom = "text", x=1.62, y=46.4, label="S. cer", fontface="italic") +
+  NULL
+
+p_bars
+ggsave("CO_NCO_barplot_genome_cross12_Scer_Spar.pdf", height = 5, width = 8)
+
+```
+
+[This will be a supplementary table of CO and NCO averages per tetrad per cross per chromosome:]
+
+```{r suptable1, echo=FALSE, fig.width=7}
+
+COs1_chrom_tetrad<-data.frame(V1=rep(0,48))
+
+for(j in 1:16){
+  chrom_co<-c()
+  for(i in 1:48){
+    chrom_co<-c(chrom_co, nrow(COs1_tetrad[which(COs1_tetrad$tetrad==i & COs1_tetrad$chr==j),]))
+  }
+  COs1_chrom_tetrad[,j]<-chrom_co
+}
+
+NCOs1_chrom_tetrad<-data.frame(V1=rep(0,48))
+
+for(j in 1:16){
+  chrom_co<-c()
+  for(i in 1:48){
+    chrom_co<-c(chrom_co, nrow(NCOs1[which(NCOs1$tetrad==i & NCOs1$chr==j),]))
+  }
+  NCOs1_chrom_tetrad[,j]<-chrom_co
+}
+
+COs2_chrom_tetrad<-data.frame(V1=rep(0,47))
+
+for(j in 1:16){
+  chrom_co<-c()
+  for(i in 1:47){
+    chrom_co<-c(chrom_co, nrow(COs2_tetrad[which(COs2_tetrad$tetrad==i & COs2_tetrad$chr==j),]))
+  }
+  COs2_chrom_tetrad[,j]<-chrom_co
+}
+
+NCOs2_chrom_tetrad<-data.frame(V1=rep(0,47))
+
+for(j in 1:16){
+  chrom_co<-c()
+  for(i in 1:47){
+    chrom_co<-c(chrom_co, nrow(NCOs2[which(NCOs2$tetrad==i & NCOs2$chr==j),]))
+  }
+  NCOs2_chrom_tetrad[,j]<-chrom_co
+}
+
+CO_summnary_chrom<-data.frame(chrom=1:16,
+                              natural_count=c(apply(X=COs1_chrom_tetrad, 2, mean)), 
+                              natural_se=c(apply(COs1_chrom_tetrad, 2, std.error)),
+                              fermentation_count=c(apply(X=COs2_chrom_tetrad, 2, mean)), 
+                              fermentation_se=c(apply(COs2_chrom_tetrad, 2, std.error)))
+
+NCO_summnary_chrom<-data.frame(chrom=1:16,
+                              natural_count=c(apply(X=NCOs1_chrom_tetrad, 2, mean)), 
+                              natural_se=c(apply(NCOs1_chrom_tetrad, 2, std.error)),
+                              fermentation_count=c(apply(X=NCOs2_chrom_tetrad, 2, mean)), 
+                              fermentation_se=c(apply(NCOs2_chrom_tetrad, 2, std.error)))
+
+rownames(CO_summnary_chrom)=NULL
+
+rownames(NCO_summnary_chrom)=NULL
+
+kable(CO_summnary_chrom, digits=4, caption = "Mean and standard error of CO counts per chromosome for fermentation and natural crossees.")
+
+kable(NCO_summnary_chrom, digits=4, caption = "Mean and standard error of NCO counts per chromosome for fermentation and natural crossees.")
+
+```
+
+We then used CO and NCO locations along all 16 chromosomes of *S. uvarum*, For further analysis, we split the genome into 20kb, non-overlapping windows, and obtained CO, NCO, and marker counts for each region (Figure \ref{fig:recombination_map}). We found modest, but significant genomewide correlation for both COs (Spearman's correlation: 0.273; p<0.0001) and NCOs (Spearman's correlation: 0.1456; p<0.001). 
+
+```{r recombination_map, echo=FALSE, fig.width=8, fig.height=8, fig.cap="\\label{fig:recombination_map}*S. uvarum* chromosomes split into 20kb, non-overlapping windows. CO, NCO, and SNP counts are reported for both crosses (fermentation and natural). CO counts are smoothed when the true location of the CO split could be in one of multiple windows. NCO counts are corrected for marker resolution."}
+
+p_CO_adj<-ggplot(COs12_count_all_final[which(COs12_count_all_final$chr %in% c(4,6,7,9,10,13,14,15)),], aes(x=mid/1000, y=COcount, color=cross)) + 
+  geom_line(aes(y=COcount/(20*47))) + 
+  #geom_segment(data=segfile2, mapping = aes(x=pos/1000, y=-0.01, xend=pos/1000+1, yend=0), size=.25, color="black") +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  geom_rect(data=Suva_chrom_length_introgressed, inherit.aes = FALSE, mapping = aes(xmin=start/1000, ymin=-0.001, xmax=end/1000, ymax=0.059), alpha=0.5, fill="gray") +
+  facet_grid(~ chr, scales="free_x", space = "free_x") +
+  xlab("Position (kb)") +
+  ylab("Rate") +
+  #labs(title = "CO") +
+  theme_bw() +
+  theme(legend.position="none") +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
+  scale_x_continuous(breaks = c(100, 500, 1000)) +
+  scale_y_continuous(name="COs/tetrad/kb", limits = c(-0.001, 0.06)) +
+  NULL
+
+p_NCO_adj<-ggplot(COs12_count_all_final[which(COs12_count_all_final$chr %in% c(4,6,7,9,10,13,14,15)),], aes(x=mid/1000, y=NCOcount, color=cross)) + 
+  geom_line(aes(y=NCOcount/(20*47))) + 
+  #geom_segment(data=segfile2, mapping = aes(x=pos/1000, y=-0.01, xend=pos/1000+1, yend=0), size=.25, color="black") +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  geom_rect(data=Suva_chrom_length_introgressed, inherit.aes = FALSE, mapping = aes(xmin=start/1000, ymin=-0.001, xmax=end/1000, ymax=0.2), alpha=0.5, fill="gray") +
+  facet_grid(~ chr, scales="free_x", space = "free_x") +
+  xlab("Position (kb)") +
+  ylab("Rate") +
+  #labs(title = "NCO") +
+  theme_bw() +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
+  scale_x_continuous(breaks = c(100, 500, 1000)) +
+  scale_y_continuous(name="NCOs/tetrad/kb", limits = c(-0.001, 0.21)) +
+  NULL
+
+p_SNP_adj<-ggplot(COs12_count_all_final[which(COs12_count_all_final$chr %in% c(4,6,7,9,10,13,14,15)),], aes(x=mid/1000, y=SNPcount/(20*47), color=cross)) + 
+  geom_line(aes(y=SNPcount/(20*47))) + 
+  #geom_segment(data=segfile2, mapping = aes(x=pos/1000, y=-0.01, xend=pos/1000+1, yend=0), size=.25, color="black") +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  geom_rect(data=Suva_chrom_length_introgressed, inherit.aes = FALSE, mapping = aes(xmin=start/1000, ymin=-0.01, xmax=end/1000, ymax=1.5), alpha=0.5, fill="gray") +
+  facet_grid(~ chr, scales="free_x", space = "free_x") +
+  xlab("Position (kb)") +
+  ylab("Rate") +
+  #labs(title = "SNPs") +
+  theme_bw() +
+  theme(legend.position="none") +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
+  scale_x_continuous(breaks = c(100, 500, 1000)) +
+  scale_y_continuous(name="Markers/tetrad/kb", limits = c(-0.01, 1.5)) +
+  NULL
+
+ggarrange(p_CO_adj, p_NCO_adj, p_SNP_adj, nrow=3, ncol=1, common.legend = T)
+p_map<-ggarrange(p_CO_adj, p_NCO_adj, p_SNP_adj, nrow=3, ncol=1)
+
+# Supplemental figure
+
+p_CO_adj_sup<-ggplot(COs12_count_all_final[which(COs12_count_all_final$chr %in% c(1, 2, 3, 5, 8, 11, 12, 16)),], aes(x=mid/1000, y=COcount, color=cross)) + 
+  geom_line(aes(y=COcount/(20*47))) + 
+  #geom_segment(data=segfile2, mapping = aes(x=pos/1000, y=-0.01, xend=pos/1000+1, yend=0), size=.25, color="black") +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  #geom_rect(data=Suva_chrom_length_introgressed, inherit.aes = FALSE, mapping = aes(xmin=start/1000, ymin=-0.001, xmax=end/1000, ymax=0.059), alpha=0.5, fill="gray") +
+  facet_grid(~ chr, scales="free_x", space = "free_x") +
+  xlab("Position (kb)") +
+  ylab("Rate") +
+  #labs(title = "CO") +
+  theme_bw() +
+  theme(legend.position="none") +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
+  scale_x_continuous(breaks = c(100, 500, 1000)) +
+  scale_y_continuous(name="COs/tetrad/kb", limits = c(-0.001, 0.06)) +
+  NULL
+
+p_NCO_adj_sup<-ggplot(COs12_count_all_final[which(COs12_count_all_final$chr %in% c(1, 2, 3, 5, 8, 11, 12, 16)),], aes(x=mid/1000, y=NCOcount, color=cross)) + 
+  geom_line(aes(y=NCOcount/(20*47))) + 
+  #geom_segment(data=segfile2, mapping = aes(x=pos/1000, y=-0.01, xend=pos/1000+1, yend=0), size=.25, color="black") +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  #geom_rect(data=Suva_chrom_length_introgressed, inherit.aes = FALSE, mapping = aes(xmin=start/1000, ymin=-0.001, xmax=end/1000, ymax=0.2), alpha=0.5, fill="gray") +
+  facet_grid(~ chr, scales="free_x", space = "free_x") +
+  xlab("Position (kb)") +
+  ylab("Rate") +
+  #labs(title = "NCO") +
+  theme_bw() +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
+  scale_x_continuous(breaks = c(100, 500, 1000)) +
+  scale_y_continuous(name="NCOs/tetrad/kb", limits = c(-0.001, 0.18)) +
+  NULL
+
+p_SNP_adj_sup<-ggplot(COs12_count_all_final[which(COs12_count_all_final$chr %in% c(1, 2, 3, 5, 8, 11, 12, 16)),], aes(x=mid/1000, y=SNPcount/(20*47), color=cross)) + 
+  geom_line(aes(y=SNPcount/(20*47))) + 
+  #geom_segment(data=segfile2, mapping = aes(x=pos/1000, y=-0.01, xend=pos/1000+1, yend=0), size=.25, color="black") +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  #geom_rect(data=Suva_chrom_length_introgressed, inherit.aes = FALSE, mapping = aes(xmin=start/1000, ymin=-0.01, xmax=end/1000, ymax=1.5), alpha=0.5, fill="gray") +
+  facet_grid(~ chr, scales="free_x", space = "free_x") +
+  xlab("Position (kb)") +
+  ylab("Rate") +
+  #labs(title = "SNPs") +
+  theme_bw() +
+  theme(legend.position="none") +
+  theme(legend.position="none", axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5)) +
+  scale_x_continuous(breaks = c(100, 500, 1000)) +
+  scale_y_continuous(name="Markers/tetrad/kb", limits = c(-0.01, 0.5)) +
+  NULL
+
+ggarrange(p_CO_adj_sup, p_NCO_adj_sup, p_SNP_adj_sup, nrow=3, ncol=1, common.legend = T)
+
+ggsave("FigureS11.jpeg", height = 10, width=8, device = "jpeg", dpi = 500)
+
+```
+
+
+We separated the 20kb windows into introgression and non-introgression windows and calculated per chromosome Spearman's correlations of CO, NCO, and marker counts between the two crosses. We find positive correlations between CO counts for all chromosomes when looking at non-introgressed regions (Table 3). For introgressed regions, we found negative correlations, which is consistent with the hypothesis that CO landscapes are changed in introgressed regions, specifically resulting in a decrease in COs (Table 4). NCOs showed more varied but generally positive correlations, with at least one negative correlation (chromosome 14) likely due to differences in the location of markers between the populations. The trend was similar in introgressed regions, though none showed a negative correlation between NCO counts. It's important to note that the majority of chromosome level correlations were not significant.
+
+```{r correlations, echo=FALSE, include=FALSE, fig.width=8, fig.cap="\\label{fig:correlations}Per chromosome Spearman's correlations between natural and fermentation crosses. (A) shows correlations in non-introgressed regions, while (B) shows correlations in introgressed regions."}
+
+cor.type="spearman"
+
+cor.test(COs12_count_all_final$COcount[COs12_count_all_final$cross=="fermentation"], COs12_count_all_final$COcount[COs12_count_all_final$cross=="natural"], method=cor.type, exact=FALSE)
+cor.test(COs12_count_all_final$NCOcount[COs12_count_all_final$cross=="fermentation"], COs12_count_all_final$NCOcount[COs12_count_all_final$cross=="natural"], method=cor.type, exact=FALSE)
+
+CorrTable_noInt<-data.frame(chr=c(), CO_corr=c(), CO1_count=c(), CO2_count=c(), NCO_corr=c(), NCO1_count=c(), NCO2_count=c(), SNP_corr=c(), SNP1_count=c(), SNP2_count=c(), SNP1_var=c(), SNP2_var=c(), SNP1_density=c(), SNP2_density=c())
+
+COs1_count_all_noInt<-COs12_count_all_final[COs12_count_all_final$cross=="natural",][which(!((COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==4 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<983774 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>866500) 
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==6 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<65500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>1) 
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==7 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<53500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>1)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==9 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<298500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>158500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<288500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>234500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<428500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>301500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==13 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<103500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>26500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<233500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>18500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<586500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>211500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==15 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<434500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>367500))),]
+
+COs2_count_all_noInt<-COs12_count_all_final[COs12_count_all_final$cross=="fermentation",][which(!((COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==4 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<983774 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>866500) 
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==6 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<65500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>1) 
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==7 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<53500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>1)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==9 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<298500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>158500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<288500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>234500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<428500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>301500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==13 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<103500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>26500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<233500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>18500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<586500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>211500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==15 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<434500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>367500))),]
+
+for(chr in 1:16){
+  CO_corr=cor.test(COs1_count_all_noInt$COcount[which(COs1_count_all_noInt$chr==chr)], COs2_count_all_noInt$COcount[which(COs2_count_all_noInt$chr==chr)], method=cor.type)$estimate
+  CO_corr_p=cor.test(COs1_count_all_noInt$COcount[which(COs1_count_all_noInt$chr==chr)], COs2_count_all_noInt$COcount[which(COs2_count_all_noInt$chr==chr)], method=cor.type)$p.value
+  CO1_count=sum(COs1_count_all_noInt$COcount[which(COs1_count_all_noInt$chr==chr)])
+  CO2_count=sum(COs2_count_all_noInt$COcount[which(COs2_count_all_noInt$chr==chr)])
+  NCO_corr=cor.test(COs1_count_all_noInt$NCOcount[which(COs1_count_all_noInt$chr==chr)], COs2_count_all_noInt$NCOcount[which(COs2_count_all_noInt$chr==chr)], method=cor.type)$estimate
+  NCO_corr_p=cor.test(COs1_count_all_noInt$NCOcount[which(COs1_count_all_noInt$chr==chr)], COs2_count_all_noInt$NCOcount[which(COs2_count_all_noInt$chr==chr)], method=cor.type)$p.value
+  NCO1_count=sum(COs1_count_all_noInt$NCOcount[which(COs1_count_all_noInt$chr==chr)])
+  NCO2_count=sum(COs2_count_all_noInt$NCOcount[which(COs2_count_all_noInt$chr==chr)])
+  SNP_corr=cor.test(COs1_count_all_noInt$SNPcount[which(COs1_count_all_noInt$chr==chr)], COs2_count_all_noInt$SNPcount[which(COs2_count_all_noInt$chr==chr)], method=cor.type)$estimate
+  SNP_corr_p=cor.test(COs1_count_all_noInt$SNPcount[which(COs1_count_all_noInt$chr==chr)], COs2_count_all_noInt$SNPcount[which(COs2_count_all_noInt$chr==chr)], method=cor.type)$p.value
+  SNP1_count=sum(COs1_count_all_noInt$SNPcount[which(COs1_count_all_noInt$chr==chr)])
+  SNP2_count=sum(COs2_count_all_noInt$SNPcount[which(COs2_count_all_noInt$chr==chr)])
+  SNP1_var=var(COs1_count_all_noInt$SNPcount[which(COs1_count_all_noInt$chr==chr)])
+  SNP2_var=var(COs2_count_all_noInt$SNPcount[which(COs2_count_all_noInt$chr==chr)])
+  SNP1_density=SNP1_count/Suva_chrom_length[chr,1]
+  SNP2_density=SNP2_count/Suva_chrom_length[chr,1]
+  CorrTable_noInt=rbind(CorrTable_noInt, data.frame(chr=chr, 
+                                        CO_corr=CO_corr, 
+                                        CO1_count=CO1_count, 
+                                        CO2_count=CO2_count, 
+                                        NCO_corr=NCO_corr, 
+                                        NCO1_count=NCO1_count, 
+                                        NCO2_count=NCO2_count, 
+                                        SNP_corr=SNP_corr, 
+                                        SNP1_count=SNP1_count, 
+                                        SNP2_count=SNP2_count,
+                                        SNP1_var=SNP1_var,
+                                        SNP2_var=SNP2_var,
+                                        SNP1_density=SNP1_density, 
+                                        SNP2_density=SNP2_density,
+                                        CO_corr_p=CO_corr_p,
+                                        NCO_corr_p=NCO_corr_p,
+                                        SNP_corr_p=SNP_corr_p))
+}
+
+CorrTable_noInt_map<-CorrTable_noInt[,c(2,5,8)]
+CorrTable_noInt_map<-cbind(rep(1:16, 3), melt(CorrTable_noInt_map))
+colnames(CorrTable_noInt_map)=c("Chromosome", "Type", "Correlation")
+
+
+
+p_cornoint<-ggplot(data=CorrTable_noInt_map, aes(x=Type, y=factor(Chromosome, levels = 16:1), fill=Correlation)) +
+  geom_tile() +
+  scale_fill_gradient2(low="blue", high = "red", mid = "white") +
+  ylab("Chromosome") +
+  scale_x_discrete(labels = c("CO_corr"="CO count", "NCO_corr"="NCO count", "SNP_corr"="Marker count")) +
+  theme_minimal()
+
+#ggsave("CO_NCO_SNP_correlations.pdf", height = 5, width = 8)
+
+CorrTable_Int<-data.frame(chr=c(), CO_corr=c(), CO1_count=c(), CO2_count=c(), NCO_corr=c(), NCO1_count=c(), NCO2_count=c(), SNP_corr=c(), SNP1_count=c(), SNP2_count=c(), SNP1_var=c(), SNP2_var=c(), SNP1_density=c(), SNP2_density=c())
+
+COs1_count_all_Int<-COs12_count_all_final[COs12_count_all_final$cross=="natural",][which(((COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==4 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<983774 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>866500) 
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==6 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<65500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>1) 
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==7 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<53500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>1)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==9 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<298500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>158500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<288500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>234500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<428500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>301500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==13 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<103500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>26500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<233500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>18500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<586500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>211500)
+                                                            | (COs12_count_all_final[COs12_count_all_final$cross=="natural",]$chr==15 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$start<434500 & COs12_count_all_final[COs12_count_all_final$cross=="natural",]$end>367500))),]
+
+COs2_count_all_Int<-COs12_count_all_final[COs12_count_all_final$cross=="fermentation",][which(((COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==4 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<983774 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>866500) 
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==6 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<65500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>1) 
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==7 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<53500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>1)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==9 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<298500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>158500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<288500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>234500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==10 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<428500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>301500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==13 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<103500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>26500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<233500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>18500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==14 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<586500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>211500)
+                                                      | (COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$chr==15 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$start<434500 & COs12_count_all_final[COs12_count_all_final$cross=="fermentation",]$end>367500))),]
+
+for(chr in c(4,6,7,9,10,13,14,15)){
+  CO_corr=cor.test(COs1_count_all_Int$COcount[which(COs1_count_all_Int$chr==chr)], COs2_count_all_Int$COcount[which(COs2_count_all_Int$chr==chr)], method=cor.type)$estimate
+  CO_corr_p=cor.test(COs1_count_all_Int$COcount[which(COs1_count_all_Int$chr==chr)], COs2_count_all_Int$COcount[which(COs2_count_all_Int$chr==chr)], method=cor.type)$p.value
+  CO1_count=sum(COs1_count_all_Int$COcount[which(COs1_count_all_Int$chr==chr)])
+  CO2_count=sum(COs2_count_all_Int$COcount[which(COs2_count_all_Int$chr==chr)])
+  NCO_corr=cor.test(COs1_count_all_Int$NCOcount[which(COs1_count_all_Int$chr==chr)], COs2_count_all_Int$NCOcount[which(COs2_count_all_Int$chr==chr)], method=cor.type)$estimate
+  NCO_corr_p=cor.test(COs1_count_all_Int$NCOcount[which(COs1_count_all_Int$chr==chr)], COs2_count_all_Int$NCOcount[which(COs2_count_all_Int$chr==chr)], method=cor.type)$p.value
+  NCO1_count=sum(COs1_count_all_Int$NCOcount[which(COs1_count_all_Int$chr==chr)])
+  NCO2_count=sum(COs2_count_all_Int$NCOcount[which(COs2_count_all_Int$chr==chr)])
+  SNP_corr=cor.test(COs1_count_all_Int$SNPcount[which(COs1_count_all_Int$chr==chr)], COs2_count_all_Int$SNPcount[which(COs2_count_all_Int$chr==chr)], method=cor.type)$estimate
+  SNP_corr_p=cor.test(COs1_count_all_Int$SNPcount[which(COs1_count_all_Int$chr==chr)], COs2_count_all_Int$SNPcount[which(COs2_count_all_Int$chr==chr)], method=cor.type)$p.value
+  SNP1_count=sum(COs1_count_all_Int$SNPcount[which(COs1_count_all_Int$chr==chr)])
+  SNP2_count=sum(COs2_count_all_Int$SNPcount[which(COs2_count_all_Int$chr==chr)])
+  SNP1_var=var(COs1_count_all_Int$SNPcount[which(COs1_count_all_Int$chr==chr)])
+  SNP2_var=var(COs2_count_all_Int$SNPcount[which(COs2_count_all_Int$chr==chr)])
+  SNP1_density=SNP1_count/Suva_chrom_length[chr,1]
+  SNP2_density=SNP2_count/Suva_chrom_length[chr,1]
+  CorrTable_Int=rbind(CorrTable_Int, data.frame(chr=chr, 
+                                        CO_corr=CO_corr, 
+                                        CO1_count=CO1_count, 
+                                        CO2_count=CO2_count, 
+                                        NCO_corr=NCO_corr, 
+                                        NCO1_count=NCO1_count, 
+                                        NCO2_count=NCO2_count, 
+                                        SNP_corr=SNP_corr, 
+                                        SNP1_count=SNP1_count, 
+                                        SNP2_count=SNP2_count,
+                                        SNP1_var=SNP1_var,
+                                        SNP2_var=SNP2_var,
+                                        SNP1_density=SNP1_density, 
+                                        SNP2_density=SNP2_density,
+                                        CO_corr_p=CO_corr_p,
+                                        NCO_corr_p=NCO_corr_p,
+                                        SNP_corr_p=SNP_corr_p))
+}
+
+CorrTable_Int_map<-CorrTable_Int[,c(2,5,8)]
+CorrTable_Int_map<-cbind(rep(c(4,6,7,9,10,13,14,15), 3), melt(CorrTable_Int_map))
+colnames(CorrTable_Int_map)=c("Chromosome", "Type", "Correlation")
+
+
+
+p_corint<-ggplot(data=CorrTable_Int_map, aes(x=Type, y=factor(Chromosome, levels = c(15,14,13,10,9,7,6,4)), fill=Correlation)) +
+  geom_tile() +
+  scale_fill_gradient2(low="blue", high = "red", mid = "white") +
+  ylab("Chromosome") +
+  scale_x_discrete(labels = c("CO_corr"="CO count", "NCO_corr"="NCO count", "SNP_corr"="Marker count")) +
+  theme_minimal()
+
+#ggsave("CO_NCO_SNP_correlations_.pdf", height = 5, width = 8)
+
+ggarrange(p_cornoint, p_corint, nrow = 1, ncol=2, labels = c("A", "B"))
+
+```
+
+
+```{r CorrTables, echo=FALSE}
+
+rownames(CorrTable_noInt)=c()
+rownames(CorrTable_Int)=c()
+
+kable(CorrTable_Int[,c(1,2,15,5,16,8,17)], caption = "Correlations in introgressed regions", digits = 4)
+kable(CorrTable_noInt[,c(1,2,15,5,16,8,17)], caption = "Correlations in non-introgressed regions", digits = 4)
+```
+
+We find that regions of introgression tend to have higher CO counts and lower NCO counts in the fermentation cross, where the introgression is found. The natural cross has more CO in general, but the difference is much greater in the introgressed regions (Figure \ref{fig:meanIntrogress}). This is supported by our linear model of CO counts, which shows a significant positive effect of the interactions between natural cross and introgression (whether a genomic window is from the natural cross and whether that window is in an introgressed region). This model also shows a significant negative effect of introgression alone and a significant positive effect of GC content, both consistent with previous findings about CO location (Table 5). Our NCO count linear model showed a similar positive effect of GC content, but showed opposite significant coefficients for the other two explanatory variables (Table 6). This indicates that GC content still plays an important role in localizing NCOs, and supporting our findings that their patterns around introgressed regions are opposite to those of COs.
+
+```{r meanIntrogress, echo=FALSE, fig.width=8, fig.height=3.5, fig.cap="\\label{fig:meanIntrogress}Mean CO/kb (A) and NCO/kb (B) by cross and introgression. While the natural cross does not containg introgression, the region where introgression is present in the fermentation cross in compared to the same genomic region in the natural cross. Error bars represeng the standard error around the mean."}
+
+CO_NCO_Inter_plot<-data.frame(cross=as.factor(rep(c("fermentation", "natural"),2)), Introgression=as.factor(c(0,0,1,1)), CO_mean=c(with(COs12_count_all_final, tapply(COcount, list(cross, Introgression), mean))), CO_se=c(with(COs12_count_all_final, tapply(COcount, list(cross, Introgression), std.error))), NCO_mean=c(with(COs12_count_all_final, tapply(NCOcount, list(cross, Introgression), mean))), NCO_se=c(with(COs12_count_all_final, tapply(NCOcount, list(cross, Introgression), std.error))))
+
+p_CO_inter_line<-ggplot(data = CO_NCO_Inter_plot, aes(x=Introgression, y=CO_mean/(20*47), group=cross)) +
+  geom_line(aes(linetype=cross, color=cross), size=1.4) +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  geom_point(aes(color=cross), size=3) +
+  geom_errorbar(aes(ymin=(CO_mean-CO_se)/(20*47), ymax=(CO_mean+CO_se)/(20*47), color=cross), size=1.4, width=0.1) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ylab("Mean CO rate (per kb)")+
+  NULL
+  
+p_NCO_inter_line<-ggplot(data = CO_NCO_Inter_plot, aes(x=Introgression, y=NCO_mean/(20*47), group=cross)) +
+  geom_line(aes(linetype=cross, color=cross), size=1.4) +
+  scale_color_manual(values = c("#C38080", "#004D40")) +
+  geom_point(aes(color=cross), size=3) +
+  geom_errorbar(aes(ymin=(NCO_mean-NCO_se)/(20*47), ymax=(NCO_mean+NCO_se)/(20*47), color=cross), size=1.4, width=0.1) +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ylab("Mean NCO rate (per kb)")+
+  NULL
+
+ggarrange(p_CO_inter_line, p_NCO_inter_line, nrow = 1, ncol=2, labels = c("A","B"), legend = "right", common.legend = T)
+
+```
+
+```{r glm, echo=FALSE, fig.width=8}
+
+glm_lmco<-glm(formula=COcount ~ Introgression + cross:Introgression + GC, family = "gaussian", COs12_count_all_final)
+
+kable(summary(glm_lmco)$coefficients, caption = "Coefficients of gaussian generalized linear model modeling CO counts per 20kb window.", digits = 4)
+
+glm_lm<-glm(formula=NCOcount ~ Introgression + GC, family = "gaussian", COs12_count_all_final)
+
+kable(summary(glm_lm)$coefficients, caption = "Coefficients of gaussian generalized linear model modeling NCO counts per 20kb window.", digits = 4)
+
+```
+
+```{r combfig, echo=FALSE, fig.width=8, fig.height=10}
+
+p_bars<-ggplot(data=CO_NCO_barplot_12, aes(x=type, y=count, fill=cross)) + 
+  geom_bar(stat = "identity", position = position_dodge(), width = 0.4, color="black") + 
+  scale_fill_manual(values = c("#C38080", "#004D40")) +
+  geom_errorbar(aes(ymin=count-se, ymax=count+se), position = position_dodge(.4), width=.1) +
+  theme_bw() +
+  #theme(legend.position = "none") +
+  #scale_fill_brewer(palette = "Paired") +
+  #geom_segment(x = 0.6, xend = 1.2, y = CO_NCO_barplot_12$count[3]*1.11, yend = CO_NCO_barplot_12$count[3]*1.11, color="red", size = 1, linetype=2) +
+  #geom_segment(x = 1.6, xend = 2.2, y = CO_NCO_barplot_12$count[4]*1.11, yend = CO_NCO_barplot_12$count[4]*1.11, color="red", size = 1, linetype=2) +
+  geom_segment(x = 0.725, xend = 0.8, y = 54.8, yend = 54.8, color="black", size = 0.2, linetype=1, arrow = arrow(length=unit(0.1, "cm"), ends="last")) +
+  geom_segment(x = 1.725, xend = 1.8, y = 26.9, yend = 26.9, color="black", size = 0.2, linetype=1, arrow = arrow(length=unit(0.1, "cm"), ends="last")) +
+  geom_segment(x = 0.925, xend = 1, y = 76.5, yend = 76.5, color="black", size = 0.2, linetype=1, arrow = arrow(length=unit(0.1, "cm"), ends="last")) +
+  geom_segment(x = 1.725, xend = 1.8, y = 46.4, yend = 46.4, color="black", size = 0.2, linetype=1, arrow = arrow(length=unit(0.1, "cm"), ends="last")) +
+  annotate(geom = "text", x=0.6, y=54.8, label="S. par", fontface="italic", size = 2) +
+  annotate(geom = "text", x=1.6, y=26.9, label="S. par", fontface="italic", size = 2) +
+  annotate(geom = "text", x=0.8, y=76.5, label="S. cer", fontface="italic", size = 2) +
+  annotate(geom = "text", x=1.6, y=46.4, label="S. cer", fontface="italic", size = 2) +
+  theme(legend.position = "top") +
+  NULL
+
+ggarrange(ggarrange(p_bars, p_CO_inter_line, p_NCO_inter_line, nrow=1, ncol=3, labels = c("A", "B", "C")), p_map, nrow=2, ncol=1, heights = c(8/3, 10-(8/3)), labels=c("", "D"))
+
+ggsave(filename="Figure1.jpg", device = "jpeg", dpi = 500, height = 10, width=8)
+```
+
+## Homology
+
+To evaluate the relationship of homology to the CO and NCO landscapes in introgressed regions of the fermentation cross, we measured homology, NCO depth, and CO count in 101bp sliding windows along each of the introgressions. In each window we counted the number of NCO tracts that intersect with the window as a measurement of NCO depth, and simply counted the CO events in the window. We measured homology in the sliding windows by measuring the proportion of bases that are expected to match between the two strains (Figure \ref{fig:IntrogressHomology}). We then ran Spearman's correlations and a loess regression along each introgression and found a weak, but often significant (p<<0.001) correlation between NCOs and homology in the introgressed region (Table 7). From the loess regression we can observe an increase in NCO as homology reduces until about 0.9-0.8 homology, at which point NCOs level out or reduce. However, this effect is very weak with respect to the NCO counts and at low levels of homology the uncertainty of the regression line is very large. This is primarily driven by the number of windows with no NCOs (Figure \ref{fig:IntrogressLoess}).
+
+```{r IntrogressHomology, echo=FALSE, fig.width=8, fig.height=7, fig.cap="\\label{fig:IntrogressHomology}CO, NCO, and homology in 101bp sliding windown of fermentation cross introgressed regions. CO counts are shown in blue, the depth of NCO tracts are shown in orange, and the proportion of expected homologous bases between the two fermentation strains is shown in black."}
+
+homology_function<-function(position, chromosome, size, homfile){
+  start=position-(size-1)/2
+  end=position+(size-1)/2
+  hom=(size-(sum(homfile$hom[which(homfile$chr==chromosome & homfile$pos>=start & homfile$pos<=end)])))/size
+  return(hom)
+}
+
+NCOs_function<-function(position, chromosome, size, NCOfile){
+  start=position-(size-1)/2
+  end=position+(size-1)/2
+  nco=length(which(NCOfile$chr==chromosome & ((NCOfile$snp_start_in>=start & NCOfile$snp_start_in<=end) | (NCOfile$snp_end_in>=start & NCOfile$snp_end_in<=end))))
+  return(nco)
+}
+
+COs_function<-function(position, chromosome, size, COfile){
+  start=position-(size-1)/2
+  end=position+(size-1)/2
+  co=length(which(COfile$chr==chromosome & COfile$pos.bp.<=end & COfile$pos.bp.>=start))
+  return(co)
+}
+
+#Finding all the rows that contain introgression
+tractInt<-which((NCOs2$chr==4 & NCOs2$pos.bp.>=866500 & NCOs2$pos.bp.<=983774) | (NCOs2$chr==6 & NCOs2$pos.bp.>=1 & NCOs2$pos.bp.<=65500) | (NCOs2$chr==7 & NCOs2$pos.bp.>=1 & NCOs2$pos.bp.<=53500) | (NCOs2$chr==9 & NCOs2$pos.bp.>=158500 & NCOs2$pos.bp.<=298500) | (NCOs2$chr==10 & NCOs2$pos.bp.>=234500 & NCOs2$pos.bp.<=288500) | (NCOs2$chr==10 & NCOs2$pos.bp.>=301500 & NCOs2$pos.bp.<=428500) | (NCOs2$chr==13 & NCOs2$pos.bp.>=26500 & NCOs2$pos.bp.<=103500) | (NCOs2$chr==14 & NCOs2$pos.bp.>=18500 & NCOs2$pos.bp.<=586500) | (NCOs2$chr==15 & NCOs2$pos.bp.>=367500 & NCOs2$pos.bp.<=434500))
+
+
+NCOs2_Int_4<-NCOs2[which(NCOs2$chr==4 & NCOs2$pos.bp.>=866500 & NCOs2$pos.bp.<=983774),]
+NCOs2_Int_6<-NCOs2[which(NCOs2$chr==6 & NCOs2$pos.bp.>=1 & NCOs2$pos.bp.<=65500),]
+NCOs2_Int_7<-NCOs2[which(NCOs2$chr==7 & NCOs2$pos.bp.>=1 & NCOs2$pos.bp.<=53500),]
+NCOs2_Int_9<-NCOs2[which(NCOs2$chr==9 & NCOs2$pos.bp.>=158500 & NCOs2$pos.bp.<=298500),]
+NCOs2_Int_10.1<-NCOs2[which(NCOs2$chr==10 & NCOs2$pos.bp.>=234500 & NCOs2$pos.bp.<=288500),]
+NCOs2_Int_10.2<-NCOs2[which(NCOs2$chr==10 & NCOs2$pos.bp.>=301500 & NCOs2$pos.bp.<=428500),]
+NCOs2_Int_13<-NCOs2[which(NCOs2$chr==13 & NCOs2$pos.bp.>=26500 & NCOs2$pos.bp.<=103500),]
+NCOs2_Int_14<-NCOs2[which(NCOs2$chr==14 & NCOs2$pos.bp.>=18500 & NCOs2$pos.bp.<=586500),]
+NCOs2_Int_15<-NCOs2[which(NCOs2$chr==15 & NCOs2$pos.bp.>=367500 & NCOs2$pos.bp.<=434500),]
+
+Hom_table_Int_4<-data.frame(chr=rep(4, length(seq(866500, 983774, 50))), pos=seq(866500, 983774, 50), hom=sapply(X=seq(866500, 983774, 50), FUN=homology_function, chromosome=4, size=101, homfile=homfile2), NCOs=sapply(X=seq(866500, 983774, 50), FUN=NCOs_function, chromosome=4, size=101, NCOfile=NCOs2), COs=sapply(X=seq(866500, 983774, 50), FUN=COs_function, chromosome=4, size=101, COfile=COs2))
+Hom_table_Int_6<-data.frame(chr=rep(6, length(seq(1, 65500, 50))), pos=seq(1, 65500, 50), hom=sapply(X=seq(1, 65500, 50), FUN=homology_function, chromosome=6, size=101, homfile=homfile2), NCOs=sapply(X=seq(1, 65500, 50), FUN=NCOs_function, chromosome=6, size=101, NCOfile=NCOs2), COs=sapply(X=seq(1, 65500, 50), FUN=COs_function, chromosome=6, size=101, COfile=COs2))
+Hom_table_Int_7<-data.frame(chr=rep(7, length(seq(1, 53500, 50))), pos=seq(1, 53500, 50), hom=sapply(X=seq(1, 53500, 50), FUN=homology_function, chromosome=7, size=101, homfile=homfile2), NCOs=sapply(X=seq(1, 53500, 50), FUN=NCOs_function, chromosome=7, size=101, NCOfile=NCOs2), COs=sapply(X=seq(1, 53500, 50), FUN=COs_function, chromosome=7, size=101, COfile=COs2))
+Hom_table_Int_9<-data.frame(chr=rep(9, length(seq(158500, 298500, 50))), pos=seq(158500, 298500, 50), hom=sapply(X=seq(158500, 298500, 50), FUN=homology_function, chromosome=9, size=101, homfile=homfile2), NCOs=sapply(X=seq(158500, 298500, 50), FUN=NCOs_function, chromosome=9, size=101, NCOfile=NCOs2), COs=sapply(X=seq(158500, 298500, 50), FUN=COs_function, chromosome=9, size=101, COfile=COs2))
+Hom_table_Int_10.1<-data.frame(chr=rep(10, length(seq(234500, 288500, 50))), pos=seq(234500, 288500, 50), hom=sapply(X=seq(234500, 288500, 50), FUN=homology_function, chromosome=10, size=101, homfile=homfile2), NCOs=sapply(X=seq(234500, 288500, 50), FUN=NCOs_function, chromosome=10, size=101, NCOfile=NCOs2), COs=sapply(X=seq(234500, 288500, 50), FUN=COs_function, chromosome=10, size=101, COfile=COs2))
+Hom_table_Int_10.2<-data.frame(chr=rep(10, length(seq(301500, 428500, 50))), pos=seq(301500, 428500, 50), hom=sapply(X=seq(301500, 428500, 50), FUN=homology_function, chromosome=10, size=101, homfile=homfile2), NCOs=sapply(X=seq(301500, 428500, 50), FUN=NCOs_function, chromosome=10, size=101, NCOfile=NCOs2), COs=sapply(X=seq(301500, 428500, 50), FUN=COs_function, chromosome=10, size=101, COfile=COs2))
+Hom_table_Int_13<-data.frame(chr=rep(13, length(seq(26500, 103500, 50))), pos=seq(26500, 103500, 50), hom=sapply(X=seq(26500, 103500, 50), FUN=homology_function, chromosome=13, size=101, homfile=homfile2), NCOs=sapply(X=seq(26500, 103500, 50), FUN=NCOs_function, chromosome=13, size=101, NCOfile=NCOs2), COs=sapply(X=seq(26500, 103500, 50), FUN=COs_function, chromosome=13, size=101, COfile=COs2))
+Hom_table_Int_14<-data.frame(chr=rep(14, length(seq(18500, 586500, 50))), pos=seq(18500, 586500, 50), hom=sapply(X=seq(18500, 586500, 50), FUN=homology_function, chromosome=14, size=101, homfile=homfile2), NCOs=sapply(X=seq(18500, 586500, 50), FUN=NCOs_function, chromosome=14, size=101, NCOfile=NCOs2), COs=sapply(X=seq(18500, 586500, 50), FUN=COs_function, chromosome=14, size=101, COfile=COs2))
+Hom_table_Int_15<-data.frame(chr=rep(15, length(seq(367500, 434500, 50))), pos=seq(367500, 434500, 50), hom=sapply(X=seq(367500, 434500, 50), FUN=homology_function, chromosome=15, size=101, homfile=homfile2), NCOs=sapply(X=seq(367500, 434500, 50), FUN=NCOs_function, chromosome=15, size=101, NCOfile=NCOs2), COs=sapply(X=seq(367500, 434500, 50), FUN=COs_function, chromosome=15, size=101, COfile=COs2))
+
+
+p_hom_4<-ggplot(data = Hom_table_Int_4, aes(x=pos, y=hom*max(NCOs))) +
+#  geom_smooth(method="loess", span=1e-2, se=F, color="red") +
+  geom_line(color=cbbPalette[1]) +
+#  geom_point(aes(y=NCOs, alpha=I(ifelse(NCOs==0, 0, 1))), color="blue") +
+#  geom_point(aes(y=COs, alpha=I(ifelse(COs==0, 0, 1))), color="orange") +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+#  geom_smooth(aes(y=NCOs), method="loess", span=1e-2, se=F, color="black") +
+#  geom_smooth(aes(y=COs), method="loess", span=1e-2, se=F, color="blue") +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_4$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 4") +
+  NULL
+
+p_hom_6<-ggplot(data = Hom_table_Int_6, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_6$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 6") +
+  NULL
+
+p_hom_7<-ggplot(data = Hom_table_Int_7, aes(x=pos, y=hom*max(COs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_7$COs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 7") +
+  NULL
+
+p_hom_9<-ggplot(data = Hom_table_Int_9, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_9$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 9") +
+  NULL
+
+p_hom_10.1<-ggplot(data = Hom_table_Int_10.1, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_10.1$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 10(a)") +
+  NULL
+
+p_hom_10.2<-ggplot(data = Hom_table_Int_10.2, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_10.2$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 10(b)") +
+  NULL
+
+p_hom_13<-ggplot(data = Hom_table_Int_13, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_13$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 13") +
+  NULL
+
+p_hom_14<-ggplot(data = Hom_table_Int_14, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_14$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 14") +
+  NULL
+
+p_hom_15<-ggplot(data = Hom_table_Int_15, aes(x=pos, y=hom*max(NCOs))) +
+  geom_line(color=cbbPalette[1]) +
+  geom_line(aes(y=NCOs), size=1.2, color=cbbPalette[7]) +
+  geom_line(aes(y=COs), size=1.2, color=cbbPalette[6]) +
+  scale_y_continuous("CO and NCO count", sec.axis = sec_axis(~./max(Hom_table_Int_15$NCOs), name = "Homology")) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1)) +
+  labs(title = "Chromosome 15") +
+ NULL
+
+ggarrange(p_hom_4, p_hom_6, p_hom_7, p_hom_9, p_hom_10.1, p_hom_10.2, p_hom_13, p_hom_14, p_hom_15, ncol = 3, nrow = 3)
+ggsave("Figure3.jpg", height = 8.5, width = 8.5, dpi=500)
+
+```
+
+```{r IntrogressLoess, echo=FALSE, fig.width=8, fig.height=11, fig.cap="\\label{fig:IntrogressLoess}Loess regression plots of NCOs as a function of homology in the introgressed regions of the fermentation cross. The left column's y-axis is scaled to the size of the loess curve, while the right column's y-axis is scaled to the NCO count. The grey shading indicates the standard error for the loess estimates. Chromosome 14's SE ribbon was removed for readability."}
+
+loess.gcv <- function(x, y){
+  nobs <- length(y)
+  xs <- sort(x, index.return = TRUE)
+  x <- xs$x
+  y <- y[xs$ix]
+  tune.loess <- function(s){
+    lo <- loess(y ~ x, span = s)
+    mean((lo$fitted - y)^2) / (1 - lo$trace.hat/nobs)^2
+  }
+  os <- optimize(tune.loess, interval = c(.01, 99))$minimum
+  lo <- loess(y ~ x, span = os)
+  list(x = x, y = lo$fitted, df = lo$trace.hat, span = os)
+}
+
+p_loess_4<-ggplot(data = Hom_table_Int_4, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_4$hom, Hom_table_Int_4$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 4") +
+  xlab("Homology")
+
+p_loess_6<-ggplot(data = Hom_table_Int_6, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_6$hom, Hom_table_Int_6$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 6") +
+  xlab("Homology")
+
+p_loess_7<-ggplot(data = Hom_table_Int_7, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_7$hom, Hom_table_Int_7$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 7") +
+  xlab("Homology")
+
+p_loess_9<-ggplot(data = Hom_table_Int_9, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_9$hom, Hom_table_Int_9$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 9") +
+  xlab("Homology")
+
+p_loess_10.1<-ggplot(data = Hom_table_Int_10.1, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_10.1$hom, Hom_table_Int_10.1$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 10 (1)") +
+  xlab("Homology")
+
+p_loess_10.2<-ggplot(data = Hom_table_Int_10.2, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_10.2$hom, Hom_table_Int_10.2$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 10 (2)") +
+  xlab("Homology")
+
+p_loess_13<-ggplot(data = Hom_table_Int_13, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_13$hom, Hom_table_Int_13$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 13") +
+  xlab("Homology")
+
+p_loess_14<-ggplot(data = Hom_table_Int_14, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_14$hom, Hom_table_Int_14$NCOs)$span), se=F) +
+  theme_bw() +
+  labs(title="Chrom. 14") +
+  xlab("Homology")
+
+p_loess_15<-ggplot(data = Hom_table_Int_15, aes(x=hom, y=NCOs)) + 
+  geom_smooth(method="loess", span=(loess.gcv(Hom_table_Int_15$hom, Hom_table_Int_15$NCOs)$span)) +
+  theme_bw() +
+  labs(title="Chrom. 15") +
+  xlab("Homology")
+
+p_loess_point_4<-p_loess_4 +
+  geom_point()
+
+p_loess_point_6<-p_loess_6 +
+  geom_point()
+
+p_loess_point_7<-p_loess_7 +
+  geom_point()
+
+p_loess_point_9<-p_loess_9 +
+  geom_point()
+
+p_loess_point_10.1<-p_loess_10.1 +
+  geom_point()
+
+p_loess_point_10.2<-p_loess_10.2 +
+  geom_point()
+
+p_loess_point_13<-p_loess_13 +
+  geom_point()
+
+p_loess_point_14<-p_loess_14 +
+  geom_point() 
+
+p_loess_point_15<-p_loess_15 +
+  geom_point()
+
+
+
+#ggarrange(p_loess_4, p_loess_point_4, p_loess_6, p_loess_point_6, p_loess_7, p_loess_point_7, p_loess_9, p_loess_point_9, p_loess_10.1, p_loess_point_10.1, p_loess_10.2, p_loess_point_10.2, p_loess_13, p_loess_point_13, p_loess_14, p_loess_point_14, p_loess_15, p_loess_point_15, ncol=2, nrow=9)
+
+ggarrange(p_loess_4, p_loess_point_4, p_loess_6, p_loess_point_6, p_loess_7, p_loess_point_7, p_loess_9, p_loess_point_9, p_loess_10.1, p_loess_point_10.1, p_loess_10.2, p_loess_point_10.2, p_loess_13, p_loess_point_13, p_loess_14, p_loess_point_14, p_loess_15, p_loess_point_15, nrow=9, ncol=2)
+
+
+```
+
+```{r IntrogressHomology_corr, echo=FALSE, fig.width=8, fig.height=11}
+
+spear_Int_4_NCO<-cor.test(Hom_table_Int_4$NCOs, Hom_table_Int_4$hom, method = "spearman")
+spear_Int_6_NCO<-cor.test(Hom_table_Int_6$NCOs, Hom_table_Int_6$hom, method = "spearman")
+spear_Int_7_NCO<-cor.test(Hom_table_Int_7$NCOs, Hom_table_Int_7$hom, method = "spearman")
+spear_Int_9_NCO<-cor.test(Hom_table_Int_9$NCOs, Hom_table_Int_9$hom, method = "spearman")
+spear_Int_10.1_NCO<-cor.test(Hom_table_Int_10.1$NCOs, Hom_table_Int_10.1$hom, method = "spearman")
+spear_Int_10.2_NCO<-cor.test(Hom_table_Int_10.2$NCOs, Hom_table_Int_10.2$hom, method = "spearman")
+spear_Int_13_NCO<-cor.test(Hom_table_Int_13$NCOs, Hom_table_Int_13$hom, method = "spearman")
+spear_Int_14_NCO<-cor.test(Hom_table_Int_14$NCOs, Hom_table_Int_14$hom, method = "spearman")
+spear_Int_15_NCO<-cor.test(Hom_table_Int_15$NCOs, Hom_table_Int_15$hom, method = "spearman")
+
+kable(data.frame(Chromosome=c(4, 6, 7, 9, 10, 10, 13, 14, 15), Start=c(866500, 1, 1, 158500, 234500, 301500, 26500, 18500, 367500), End=c(983774, 65500, 53500, 298500, 288500, 428500, 103500, 586500, 434500), Corr=c(spear_Int_4_NCO$estimate, spear_Int_6_NCO$estimate, spear_Int_7_NCO$estimate, spear_Int_9_NCO$estimate, spear_Int_10.1_NCO$estimate, spear_Int_10.2_NCO$estimate, spear_Int_13_NCO$estimate, spear_Int_14_NCO$estimate, spear_Int_15_NCO$estimate), Sig_0.001=c(spear_Int_4_NCO$p.value<0.001, spear_Int_6_NCO$p.value<0.001, spear_Int_7_NCO$p.value<0.001, spear_Int_9_NCO$p.value<0.001, spear_Int_10.1_NCO$p.value<0.001, spear_Int_10.2_NCO$p.value<0.001, spear_Int_13_NCO$p.value<0.001, spear_Int_14_NCO$p.value<0.001, spear_Int_15_NCO$p.value<0.001)), caption = "Spearman's correlations of NCOs to homology in introgressed regions of the fermentation cross.", digits = 4)
+
+
+```
+
+In order to deal with the excess of empty windows, we focused on each recombination event (CO or NCO) and compared the homology in the vicinity of CO events to NCO events. We find that only the introgressed regions on chromosomes 7 and 14 have a significant difference in homology between CO regions and NCO regions (Table 8). Chromosomes 7 and 14 both have a highly homologous portion of their introgression (Figure \ref{fig:IntrogressHomology}). These portions contain enough COs for us to have power to detect differences between CO and NCO regions, which is not the case for any other chromosome.
+
+```{r DSBres, echo=FALSE, fig.width=7}
+
+tmp<-c(as.numeric(apply(COs1, MARGIN = 1, function(x){return((as.numeric(x[2])==4 & as.numeric(x[3])>866500 & as.numeric(x[3])<983774) |
+                                                             (as.numeric(x[2])==6 & as.numeric(x[3])>1 & as.numeric(x[3])<65500) |
+                                                             (as.numeric(x[2])==7 & as.numeric(x[3])>1 & as.numeric(x[3])<53500) |
+                                                             (as.numeric(x[2])==9 & as.numeric(x[3])>158500 & as.numeric(x[3])<298500) |
+                                                             (as.numeric(x[2])==10 & as.numeric(x[3])>234500 & as.numeric(x[3])<288500) |
+                                                             (as.numeric(x[2])==10 & as.numeric(x[3])>301500 & as.numeric(x[3])<428500) |
+                                                             (as.numeric(x[2])==13 & as.numeric(x[3])>26500 & as.numeric(x[3])<103500) |
+                                                             (as.numeric(x[2])==14 & as.numeric(x[3])>18500 & as.numeric(x[3])<586500) |
+                                                             (as.numeric(x[2])==15 & as.numeric(x[3])>367500 & as.numeric(x[3])<434500))})),
+       as.numeric(apply(NCOs1, MARGIN = 1, function(x){return((as.numeric(x[2])==4 & 
+                                                                (as.numeric(x[12])>866500 & as.numeric(x[12])<983774 | as.numeric(x[13])>866500 & as.numeric(x[13])>983774)) |
+                                                             (as.numeric(x[2])==6 & 
+                                                               (as.numeric(x[12])>1 & as.numeric(x[12])<65500 | as.numeric(x[13])>1 & as.numeric(x[13])>65500)) |
+                                                             (as.numeric(x[2])==7 & 
+                                                               (as.numeric(x[12])>1 & as.numeric(x[12])<53500 | as.numeric(x[13])>1 & as.numeric(x[13])>53500)) |
+                                                             (as.numeric(x[2])==9 & 
+                                                               (as.numeric(x[12])>158500 & as.numeric(x[12])<298500 | as.numeric(x[13])>158500 & as.numeric(x[13])<298500)) |
+                                                             (as.numeric(x[2])==10 & 
+                                                               (as.numeric(x[12])>234500 & as.numeric(x[12])<288500 | as.numeric(x[13])>234500 & as.numeric(x[13])<288500)) |
+                                                             (as.numeric(x[2])==10 & 
+                                                               (as.numeric(x[12])>301500 & as.numeric(x[12])<428500 | as.numeric(x[13])>301500 & as.numeric(x[13])<428500)) |
+                                                             (as.numeric(x[2])==13 & 
+                                                               (as.numeric(x[12])>26500 & as.numeric(x[12])<103500 | as.numeric(x[13])>26500 & as.numeric(x[13])<103500)) |
+                                                             (as.numeric(x[2])==14 & 
+                                                               (as.numeric(x[12])>18500 & as.numeric(x[12])<586500 | as.numeric(x[13])>18500 & as.numeric(x[13])<586500)) |
+                                                             (as.numeric(x[2])==15 & 
+                                                               (as.numeric(x[12])>367500 & as.numeric(x[12])<434500 | as.numeric(x[13])>367500 & as.numeric(x[13])<434500)))})),
+       as.numeric(apply(COs2, MARGIN = 1, function(x){return((as.numeric(x[2])==4 & as.numeric(x[3])>866500 & as.numeric(x[3])<983774) |
+                                                             (as.numeric(x[2])==6 & as.numeric(x[3])>1 & as.numeric(x[3])<65500) |
+                                                             (as.numeric(x[2])==7 & as.numeric(x[3])>1 & as.numeric(x[3])<53500) |
+                                                             (as.numeric(x[2])==9 & as.numeric(x[3])>158500 & as.numeric(x[3])<298500) |
+                                                             (as.numeric(x[2])==10 & as.numeric(x[3])>234500 & as.numeric(x[3])<288500) |
+                                                             (as.numeric(x[2])==10 & as.numeric(x[3])>301500 & as.numeric(x[3])<428500) |
+                                                             (as.numeric(x[2])==13 & as.numeric(x[3])>26500 & as.numeric(x[3])<103500) |
+                                                             (as.numeric(x[2])==14 & as.numeric(x[3])>18500 & as.numeric(x[3])<586500) |
+                                                             (as.numeric(x[2])==15 & as.numeric(x[3])>367500 & as.numeric(x[3])<434500))})),
+       as.numeric(apply(NCOs2, MARGIN = 1, function(x){return((as.numeric(x[2])==4 & 
+                                                                (as.numeric(x[12])>866500 & as.numeric(x[12])<983774 | as.numeric(x[13])>866500 & as.numeric(x[13])>983774)) |
+                                                             (as.numeric(x[2])==6 & 
+                                                               (as.numeric(x[12])>1 & as.numeric(x[12])<65500 | as.numeric(x[13])>1 & as.numeric(x[13])>65500)) |
+                                                             (as.numeric(x[2])==7 & 
+                                                               (as.numeric(x[12])>1 & as.numeric(x[12])<53500 | as.numeric(x[13])>1 & as.numeric(x[13])>53500)) |
+                                                             (as.numeric(x[2])==9 & 
+                                                               (as.numeric(x[12])>158500 & as.numeric(x[12])<298500 | as.numeric(x[13])>158500 & as.numeric(x[13])<298500)) |
+                                                             (as.numeric(x[2])==10 & 
+                                                               (as.numeric(x[12])>234500 & as.numeric(x[12])<288500 | as.numeric(x[13])>234500 & as.numeric(x[13])<288500)) |
+                                                             (as.numeric(x[2])==10 & 
+                                                               (as.numeric(x[12])>301500 & as.numeric(x[12])<428500 | as.numeric(x[13])>301500 & as.numeric(x[13])<428500)) |
+                                                             (as.numeric(x[2])==13 & 
+                                                               (as.numeric(x[12])>26500 & as.numeric(x[12])<103500 | as.numeric(x[13])>26500 & as.numeric(x[13])<103500)) |
+                                                             (as.numeric(x[2])==14 & 
+                                                               (as.numeric(x[12])>18500 & as.numeric(x[12])<586500 | as.numeric(x[13])>18500 & as.numeric(x[13])<586500)) |
+                                                             (as.numeric(x[2])==15 & 
+                                                               (as.numeric(x[12])>367500 & as.numeric(x[12])<434500 | as.numeric(x[13])>367500 & as.numeric(x[13])<434500)))})))
+
+
+
+DSBres<-data.frame(cross=c(rep(1,nrow(COs1)+nrow(NCOs1)), rep(2, nrow(COs2)+nrow(NCOs2))), 
+                   int=tmp, 
+                   co_nco=as.factor(c(rep("CO", nrow(COs1)), rep("NCO", nrow(NCOs1)), rep("CO", nrow(COs2)), rep("NCO", nrow(NCOs2)))),
+                   chr=c(COs1$chr, NCOs1$chr, COs2$chr, NCOs2$chr),
+                   start=c(ceiling(COs1$pos.bp.), NCOs1$snpstartout, ceiling(COs2$pos.bp.), NCOs2$snp_start_out), 
+                   end=c(ceiling(COs1$pos.bp.), NCOs1$snpendout, ceiling(COs2$pos.bp.), NCOs2$snp_end_out))
+
+rm(tmp)
+
+hom_function<-function(x, size, homfile){
+  size=ceiling(size)
+  chromosome=as.numeric(x[4])
+  if(x[5]==x[6]){
+    start=as.numeric(x[5])-(size)/2
+    end=as.numeric(x[6])+(size)/2
+    hom=(size-(sum(homfile$hom[which(homfile$chr==chromosome & homfile$pos>=start & homfile$pos<=end)])))/size
+  } else{
+    start1=as.numeric(x[5])
+    start2=as.numeric(x[6])-(size/2)
+    end1=as.numeric(x[5])+(size/2)
+    end2=as.numeric(x[6])
+    hom1=((size/2)-(sum(homfile$hom[which(homfile$chr==chromosome & homfile$pos>=start1 & homfile$pos<=end1)])))/(size/2)
+    hom2=((size/2)-(sum(homfile$hom[which(homfile$chr==chromosome & homfile$pos>=start2 & homfile$pos<=end2)])))/(size/2)
+    hom=mean(c(hom1,hom2))
+  }
+  return(hom)
+}
+
+DSBres$hom=c(apply(DSBres[which(DSBres$cross==1 & DSBres$co_nco=="CO"),], 1, FUN = hom_function, size=200, homfile=homfile1),
+      apply(DSBres[which(DSBres$cross==1 & DSBres$co_nco=="NCO"),], 1, FUN = hom_function, size=200, homfile=homfile1),
+      apply(DSBres[which(DSBres$cross==2 & DSBres$co_nco=="CO"),], 1, FUN = hom_function, size=200, homfile=homfile2),
+      apply(DSBres[which(DSBres$cross==2 & DSBres$co_nco=="NCO"),], 1, FUN = hom_function, size=200, homfile=homfile2))
+
+# NCOs2_Int_4<-NCOs2[which(NCOs2$chr==4 & NCOs2$pos.bp.>=866500 & NCOs2$pos.bp.<=983774),]
+# NCOs2_Int_6<-NCOs2[which(NCOs2$chr==6 & NCOs2$pos.bp.>=1 & NCOs2$pos.bp.<=65500),]
+# NCOs2_Int_7<-NCOs2[which(NCOs2$chr==7 & NCOs2$pos.bp.>=1 & NCOs2$pos.bp.<=53500),]
+# NCOs2_Int_9<-NCOs2[which(NCOs2$chr==9 & NCOs2$pos.bp.>=158500 & NCOs2$pos.bp.<=298500),]
+# NCOs2_Int_10.1<-NCOs2[which(NCOs2$chr==10 & NCOs2$pos.bp.>=234500 & NCOs2$pos.bp.<=288500),]
+# NCOs2_Int_10.2<-NCOs2[which(NCOs2$chr==10 & NCOs2$pos.bp.>=301500 & NCOs2$pos.bp.<=428500),]
+# NCOs2_Int_13<-NCOs2[which(NCOs2$chr==13 & NCOs2$pos.bp.>=26500 & NCOs2$pos.bp.<=103500),]
+# NCOs2_Int_14<-NCOs2[which(NCOs2$chr==14 & NCOs2$pos.bp.>=18500 & NCOs2$pos.bp.<=586500),]
+# NCOs2_Int_15<-NCOs2[which(NCOs2$chr==15 & NCOs2$pos.bp.>=367500 & NCOs2$pos.bp.<=434500),]
+
+DSBres_COs_Int_4<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==4),]
+DSBres_COs_Int_6<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==6),]
+DSBres_COs_Int_7<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==7),]
+DSBres_COs_Int_9<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==9),]
+DSBres_COs_Int_10.1<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==10 & DSBres$end<288500),]
+DSBres_COs_Int_10.2<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==10 & DSBres$end>288500),]
+DSBres_COs_Int_13<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==13),]
+DSBres_COs_Int_14<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==14),]
+DSBres_COs_Int_15<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="CO" & DSBres$chr==15),]
+
+DSBres_NCOs_Int_4<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==4),]
+DSBres_NCOs_Int_6<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==6),]
+DSBres_NCOs_Int_7<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==7),]
+DSBres_NCOs_Int_9<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==9),]
+DSBres_NCOs_Int_10.1<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==10 & DSBres$end<288500),]
+DSBres_NCOs_Int_10.2<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==10 & DSBres$end>288500),]
+DSBres_NCOs_Int_13<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==13),]
+DSBres_NCOs_Int_14<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==14),]
+DSBres_NCOs_Int_15<-DSBres[which(DSBres$cross==2 & DSBres$int==1 & DSBres$co_nco=="NCO" & DSBres$chr==15),]
+
+kable(data.frame(Introgression=c("Chromosome 4", "Chromosome 6", "Chromosome 7", "Chromosome 9", "Chromosome 10 (1)", "Chromosome 10 (2)", "Chromosome 13", "Chromosome 14", "Chromosome 15"), 
+                mean_co=c(mean(DSBres_COs_Int_4$hom), 
+                          mean(DSBres_COs_Int_6$hom),
+                          mean(DSBres_COs_Int_7$hom),
+                          mean(DSBres_COs_Int_9$hom),
+                          mean(DSBres_COs_Int_10.1$hom),
+                          mean(DSBres_COs_Int_10.2$hom),
+                          mean(DSBres_COs_Int_13$hom),
+                          mean(DSBres_COs_Int_14$hom),
+                          mean(DSBres_COs_Int_15$hom)),
+                se_co=c(std.error(DSBres_COs_Int_4$hom), 
+                          std.error(DSBres_COs_Int_6$hom),
+                          std.error(DSBres_COs_Int_7$hom),
+                          std.error(DSBres_COs_Int_9$hom),
+                          std.error(DSBres_COs_Int_10.1$hom),
+                          std.error(DSBres_COs_Int_10.2$hom),
+                          std.error(DSBres_COs_Int_13$hom),
+                          std.error(DSBres_COs_Int_14$hom),
+                          std.error(DSBres_COs_Int_15$hom)),
+               mean_nco=c(mean(DSBres_NCOs_Int_4$hom), 
+                          mean(DSBres_NCOs_Int_6$hom),
+                          mean(DSBres_NCOs_Int_7$hom),
+                          mean(DSBres_NCOs_Int_9$hom),
+                          mean(DSBres_NCOs_Int_10.1$hom),
+                          mean(DSBres_NCOs_Int_10.2$hom),
+                          mean(DSBres_NCOs_Int_13$hom),
+                          mean(DSBres_NCOs_Int_14$hom),
+                          mean(DSBres_NCOs_Int_15$hom)),
+                se_nco=c(std.error(DSBres_NCOs_Int_4$hom), 
+                          std.error(DSBres_NCOs_Int_6$hom),
+                          std.error(DSBres_NCOs_Int_7$hom),
+                          std.error(DSBres_NCOs_Int_9$hom),
+                          std.error(DSBres_NCOs_Int_10.1$hom),
+                          std.error(DSBres_NCOs_Int_10.2$hom),
+                          std.error(DSBres_NCOs_Int_13$hom),
+                          std.error(DSBres_NCOs_Int_14$hom),
+                          std.error(DSBres_NCOs_Int_15$hom)),
+                 p.value=c(t.test(DSBres_COs_Int_4$hom, DSBres_NCOs_Int_4$hom)$p.value,
+t.test(DSBres_COs_Int_6$hom, DSBres_NCOs_Int_6$hom)$p.value,
+t.test(DSBres_COs_Int_7$hom, DSBres_NCOs_Int_7$hom)$p.value,
+t.test(DSBres_COs_Int_9$hom, DSBres_NCOs_Int_9$hom)$p.value,
+t.test(DSBres_COs_Int_10.1$hom, DSBres_NCOs_Int_10.1$hom)$p.value,
+t.test(DSBres_COs_Int_10.2$hom, DSBres_NCOs_Int_10.2$hom)$p.value,
+t.test(DSBres_COs_Int_13$hom, DSBres_NCOs_Int_13$hom)$p.value,
+t.test(DSBres_COs_Int_14$hom, DSBres_NCOs_Int_14$hom)$p.value,
+t.test(DSBres_COs_Int_15$hom, DSBres_NCOs_Int_15$hom)$p.value)), 
+digits = 4, caption="Welch two sample t-test results for differences in homology between CO-adjacent regions and NCO-adjacent regios per introgression.")
+
+```
+
+## R-bar
+
+We calculated the average r-bar per chromosome and for each introgressed region for each of the two crosses. At the whole chromosome level we find that most chromosomes do not have a significantly different amount of allele shuffling. However, of the six chromosomes with significantly different r-bar values, all of them showed more shuffling in the natural cross and five of the six (chromosomes 4, 9, 10, 14, and 15) contained introgressions (Figure \ref{fig:rbar}). Chromosome 12 was the only chromosome without an introgression to have significantly different shuffling between crosses, and it also showed more crossing in the natural cross. All of the introgressed regions showed significantly more shuffling in the natural cross, indicating that despite the large increase in NCOs in the introgressed regions of the fermentation cross, they do not make up for the loss of shuffling from the decrease in COs.
+
+```{r r-bar, echo=FALSE, fig.width=8, fig.height=10, fig.cap="\\label{fig:rbar}Average r-bar for each chromosome (A) and for each introgressed region (B). Asterisks indicate a significant difference in chromosome r-bar between crosses. All introgressed regions had a significant difference in r-bar. Error bars indicate standard error around the mean."}
+
+rbar_chr<-function(x, chrom_length){
+  rbar<-c()
+  k<-nrow(chrom_length)
+  for(i in 1:k){
+    x1<-x[which(x[,1]==i),]
+    snps<-nrow(x1)
+    x1[,4]=c(x1[2:snps,2], chrom_length[i,])
+    x1[,5]=c(x1[2:snps,3], 3)
+    x1[,6]=x1[,3]-x1[,5]
+    pos_list<-x1[which(abs(x1[,6])==1),c(2,4)]
+    pos_list[,3]=apply(pos_list, 1, mean)
+    segs<-c(pos_list[,3], chrom_length[i,])-c(0, pos_list[,3])
+    p=sum(segs[which(((1:length(segs))%%2==0))])/chrom_length[i,]
+    rbar[i]=2*p*(1-p)
+  }
+  return(rbar)
+}
+
+rbar_fer_chr<-lapply(segfiles_fer, rbar_chr, chrom_length=Suva_chrom_length)
+
+rbar_fer_chr_matrix<-matrix(unlist(rbar_fer_chr), nrow = length(rbar_fer_chr), byrow = T)
+
+rbar_fer_chr_mean<-apply(rbar_fer_chr_matrix, 2, mean)
+
+rbar_fer_chr_se<-apply(rbar_fer_chr_matrix, 2, std.error)
+
+rbar_nat_chr<-lapply(segfiles_nat, rbar_chr, chrom_length=Suva_chrom_length)
+
+rbar_nat_chr_matrix<-matrix(unlist(rbar_nat_chr), nrow = length(rbar_nat_chr), byrow = T)
+
+rbar_nat_chr_mean<-apply(rbar_nat_chr_matrix, 2, mean)
+
+rbar_nat_chr_se<-apply(rbar_nat_chr_matrix, 2, std.error)
+
+rbar_plot_chr<-data.frame(chr=rep(1:16, 2), cross=c(rep("natural", 16), rep("fermentation", 16)), mean=c(rbar_nat_chr_mean, fer_int=rbar_fer_chr_mean), se=c(rbar_nat_chr_se, fer_int=rbar_fer_chr_se))
+     
+p_rc<-ggplot(data = rbar_plot_chr, aes(x=as.factor(chr), y=mean, fill=cross)) +
+  geom_bar(stat = "identity", position = position_dodge(), color="black", width = 0.75) +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.75), color= "black") +
+  scale_fill_manual(values = c("#C38080", "#004D40")) +
+  #scale_fill_manual(values = c("darkred", "lightblue")) +
+  labs(x="Chromosome", y="r-bar") +
+  theme_bw() +
+  theme(legend.position = "top") +
+  geom_text(x=4, y=0.43, label="*", color="black", size=8) +
+  geom_text(x=9, y=0.33, label="*", color="black", size=8) +
+  geom_text(x=10, y=0.42, label="*", color="black", size=8) +
+  geom_text(x=12, y=0.375, label="*", color="black", size=8) +
+  geom_text(x=14, y=0.395, label="*", color="black", size=8) +
+  geom_text(x=15, y=0.425, label="*", color="black", size=8) +
+  NULL
+
+ggsave("Rbar_barplot_chr.pdf", height = 6, width = 8)
+
+#for(i in 1:16){
+#print(i)
+#print(t.test(rbar_nat_chr_matrix[,i], rbar_fer_chr_matrix[,i])$p.value)
+#}
+
+rbar_int<-function(x, chrom_length){
+  rbar<-c()
+  k<-nrow(chrom_length)
+  for(i in 1:k){
+    x1<-x[which(x[,1]==chrom_length[i,1] & x[,2]>chrom_length[i,2] & x[,2]<chrom_length[i,3]),]
+    snps<-nrow(x1)
+    x1[,4]=c(x1[2:snps,2], chrom_length[i,3])
+    x1[,5]=c(x1[2:snps,3], 3)
+    x1[,6]=x1[,3]-x1[,5]
+    pos_list<-x1[which(abs(x1[,6])==1),c(2,4)]
+    pos_list[,3]=apply(pos_list, 1, mean)
+    segs<-c(pos_list[,3], chrom_length[i,3])-c(chrom_length[i,2], pos_list[,3])
+    p=sum(segs[which(((1:length(segs))%%2==0))])/(chrom_length[i,3]-chrom_length[i,2])
+    rbar[i]=2*p*(1-p)
+  }
+  return(rbar)
+}
+
+rbar_fer_int<-lapply(segfiles_fer, rbar_int, chrom_length=Suva_chrom_length_introgressed)
+
+rbar_fer_int_matrix<-matrix(unlist(rbar_fer_int), nrow = length(rbar_fer_int), byrow = T)
+
+rbar_fer_int_mean<-apply(rbar_fer_int_matrix, 2, mean)
+
+rbar_fer_int_se<-apply(rbar_fer_int_matrix, 2, std.error)
+
+rbar_nat_int<-lapply(segfiles_nat, rbar_int, chrom_length=Suva_chrom_length_introgressed)
+
+rbar_nat_int_matrix<-matrix(unlist(rbar_nat_int), nrow = length(rbar_nat_int), byrow = T)
+
+rbar_nat_int_mean<-apply(rbar_nat_int_matrix, 2, mean)
+
+rbar_nat_int_se<-apply(rbar_nat_int_matrix, 2, std.error)
+
+rbar_plot_int<-data.frame(chr=factor(rep(c("4", "6", "7", "9", "10a", "10b", "13", "14", "15"), 2)), cross=c(rep("natural", 9), rep("fermentation", 9)), mean=c(rbar_nat_int_mean, fer_int=rbar_fer_int_mean), se=c(rbar_nat_int_se, fer_int=rbar_fer_int_se))
+rbar_plot_int$chr<-reorder(levels(rbar_plot_int$chr), c(5, 6, 7, 8, 9, 1, 2, 3, 4))
+#, diff=rbar_nat_int_mean-rbar_fer_int_mean, percent_redux=100*(1-rbar_fer_int_mean/rbar_nat_int_mean))
+
+p_ri<-ggplot(data = rbar_plot_int, aes(x=chr, y=mean, fill=cross)) +
+  geom_bar(stat = "identity", position = position_dodge(), width=0.75, color="black") +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=.2, position=position_dodge(.75)) +
+  #scale_fill_manual(values = c("darkred", "lightblue")) +
+  scale_fill_manual(values = c("#C38080", "#004D40")) +
+  labs(x="Chromosome", y="r-bar") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  NULL
+
+ggsave("Rbar_barplot_int.pdf", height = 6, width = 8)
+
+ggarrange(p_rc, p_ri, ncol=1, nrow=2, labels = c("A", "B"))
+
+```
+
+
+
+
